@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0d0d1a;
+  --foreground: #ededed;
+  --neon-green: #39ff14;
+  --neon-green-dim: #39ff1466;
+  --neon-gold: #ffd700;
+  --surface: #1a1a2e;
+  --surface-light: #252540;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--neon-green-dim); }
+  50% { box-shadow: 0 0 20px var(--neon-green); }
+}
+
+@keyframes gps-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.animate-blob { animation: blob 7s infinite; }
+.animate-slide-up { animation: slide-up 0.3s ease-out; }
+.animate-pulse-glow { animation: pulse-glow 2s infinite; }
+
+@keyframes badge-shine {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-badge-shine { animation: badge-shine 3s infinite; }
+
+.neon-text {
+  text-shadow: 0 0 10px var(--neon-green), 0 0 40px var(--neon-green-dim), 0 0 80px var(--neon-green-dim);
+}
