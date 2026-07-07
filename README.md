@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MakanMate
+
+Pokemon Go for Malaysian Street Food. A PWA that lets you discover heritage food stalls across Malaysia, scan their menus with AI, cook dishes in a 3D mini-game, and collect them all in a Pokedex.
+
+## Features
+
+- **Heritage Radar** — Interactive map showing 12 legendary food stalls across Penang, KL, and Ipoh
+- **AI Menu Scanner** — Point your camera at a hawker menu board and Gemini AI identifies the dishes
+- **3D Cooking Mini-Game** — Tap ingredients into a wok in the correct order to "master" each dish
+- **Pokedex Collection** — Track your progress across 3 regions with district badges and completion stats
+
+## Tech Stack
+
+- Next.js 16 (App Router) + React 19 + TypeScript
+- Tailwind CSS v4
+- React Three Fiber + drei (3D scenes)
+- MapLibre GL JS (maps, no API key needed)
+- Google Gemini 2.5 Flash via Vercel AI SDK
+- Zustand (state management with localStorage persistence)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- A Google AI API key (for the menu scanner and ingredient lore features)
+
+### Setup
+
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/yeeern1217/makanmate.git
+   cd makanmate
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
+   The `--legacy-peer-deps` flag is required due to React 19 peer dependency conflicts.
+
+3. Create a `.env.local` file in the project root:
+   ```
+   GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key_here
+   ```
+   Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+4. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Notes
+
+- **GPS/Camera**: The Radar and Scan features use browser Geolocation and Camera APIs. These require HTTPS in production but work on `localhost` during development.
+- **Mobile testing**: For the best experience, use Chrome DevTools mobile emulation or access via your phone on the same network.
+
+## Project Structure
+
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+src/
+  app/              # Next.js pages (home, radar, scan, pokedex)
+  components/       # React components
+    map/            #   MapLibre radar map
+    nav/            #   Bottom navigation bar
+    pokedex/        #   3D dish viewer, cooking game, collection cards
+    scan/           #   Camera viewport, capture button, results
+    ui/             #   Shared UI (buttons, sheets, toasts)
+  lib/
+    ai/             # Gemini prompts and tool schemas
+    data/           # Heritage nodes, dish entries, region config
+  store/            # Zustand stores (app state, pokedex progress)
+  types/            # TypeScript interfaces
+```
