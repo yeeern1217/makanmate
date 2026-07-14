@@ -7,13 +7,13 @@ export default function ManualDishDropdown() {
 
   return (
     <div className="space-y-2">
-      <label className="text-sm text-gray-400">Or pick a dish manually:</label>
+      <label className="text-sm text-[var(--text-muted)]">Or pick a dish manually:</label>
       <select
         onChange={(e) => {
           if (e.target.value) router.push(`/pokedex/${e.target.value}`);
         }}
         defaultValue=""
-        className="w-full bg-[#1a1a2e] text-white border border-[#39ff14]/30 rounded-lg px-4 py-3 text-sm focus:border-[#39ff14] focus:outline-none"
+        className="w-full bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--border)] rounded-lg px-4 py-3 text-sm focus:border-[var(--accent-primary)] focus:outline-none"
       >
         <option value="" disabled>
           Select a dish...

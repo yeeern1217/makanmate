@@ -11,7 +11,7 @@ export default function GlowButton({
   onClick?: () => void;
 }) {
   const classes =
-    "inline-block px-8 py-4 rounded-full font-bold text-lg text-black bg-[#39ff14] shadow-[0_0_20px_#39ff14,0_0_60px_#39ff1466] hover:shadow-[0_0_30px_#39ff14,0_0_80px_#39ff1488] hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-center";
+    "inline-block px-8 py-4 rounded-full font-bold text-lg text-white bg-[var(--accent-primary)] border-2 border-[var(--accent-primary)] shadow-[0_4px_0_var(--border),0_6px_20px_rgba(196,85,58,0.3)] hover:shadow-[0_2px_0_var(--border),0_4px_14px_rgba(196,85,58,0.4)] hover:translate-y-[2px] active:translate-y-[4px] active:shadow-none transition-all duration-150 cursor-pointer text-center";
 
   if (href) {
     return (

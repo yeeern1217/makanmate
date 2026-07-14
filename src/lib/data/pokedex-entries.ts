@@ -9,6 +9,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Penang",
     heritage_score: 97,
     fun_fact: "Originally a poor fisherman's dish — cockles and leftover noodles fried over charcoal.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Teochew fishermen who settled along Penang's coast in the 1800s, bringing rice noodle frying traditions from Guangdong",
+    techniques: [
+      { id: "ckt-t1", name: "Wok Hei", description: "The breath of the wok — achieved by tossing noodles in a blazing-hot carbon steel wok over charcoal. The noodles must leave the wok surface to catch flame.", tool: "wok", emoji: "🔥" },
+      { id: "ckt-t2", name: "Lard Rendering", description: "Pork fat cubes fried low-and-slow until golden cracklings emerge. The rendered oil becomes the cooking fat.", tool: "wok", emoji: "🧈" },
+    ],
+    dialectPhrases: [
+      { phrase: "Tambah kerang", pronunciation: "tahm-bah keh-rahng", meaning: "Add more cockles", dialect: "Malay", context: "Ask the hawker for extra blood cockles" },
+      { phrase: "要辣的", pronunciation: "yao la de", meaning: "Make it spicy", dialect: "Hokkien", context: "Request the chili paste version" },
+    ],
     cookingOrder: ["ckt-lard", "ckt-egg", "ckt-prawn", "ckt-noodle", "ckt-cockle", "ckt-chives"],
     ingredients: [
       { id: "ckt-noodle", name: "Flat Rice Noodles", local_name: "Kuey Teow", category: "starch", color: "#f5f0e1", emoji: "🍜", geometry: "box", position: [0, 0, 0], lore_hint: "Teochew rice noodle tradition in Penang", cookingHint: "Toss the noodles in — high heat, fast hands!" },
@@ -27,6 +37,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Penang",
     heritage_score: 92,
     fun_fact: "The green noodles get their color from pandan leaf extract, pressed through a sieve by hand.",
+    culturalOrigin: "Malay",
+    migrationStoryHint: "Javanese origins of cendol brought by Indonesian traders, adapted with local pandan and gula melaka from Melaka's coconut palms",
+    techniques: [
+      { id: "cendol-t1", name: "Sieve Pressing", description: "Pandan-stained rice flour batter pressed through a brass sieve into ice water. Each strand must curl naturally.", tool: "sieve", emoji: "🫧" },
+      { id: "cendol-t2", name: "Gula Melaka Boiling", description: "Palm sugar blocks simmered into thick syrup. The darker the better — caramel notes deepen.", tool: "pot", emoji: "🍯" },
+    ],
+    dialectPhrases: [
+      { phrase: "Tambah gula", pronunciation: "tahm-bah goo-lah", meaning: "Add more palm sugar", dialect: "Malay", context: "Request extra gula melaka syrup" },
+      { phrase: "Kurang manis", pronunciation: "koo-rahng mah-nis", meaning: "Less sweet", dialect: "Malay", context: "Ask for a lighter pour of syrup" },
+    ],
     cookingOrder: ["cendol-beans", "cendol-jelly", "cendol-gula", "cendol-santan"],
     ingredients: [
       { id: "cendol-jelly", name: "Pandan Jelly Noodles", local_name: "Cendol", category: "starch", color: "#39ff14", emoji: "🍡", geometry: "cylinder", position: [0, 0, 0], lore_hint: "Pandan leaf extraction and traditional sieve pressing", cookingHint: "Layer the pandan jelly noodles over the ice" },
@@ -43,6 +63,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Penang",
     heritage_score: 94,
     fun_fact: "CNN Travel ranked it #7 on the World's 50 Best Foods list in 2011.",
+    culturalOrigin: "Peranakan",
+    migrationStoryHint: "Peranakan fusion — Malay fish broth techniques combined with Chinese noodle traditions, shaped by the Straits-born community of Penang",
+    techniques: [
+      { id: "laksa-t1", name: "Fish Stock Flaking", description: "Whole mackerel boiled then hand-flaked back into the broth. The bones dissolve into umami after hours of simmering.", tool: "mortar-and-pestle", emoji: "🐟" },
+      { id: "laksa-t2", name: "Spice Pounding", description: "Lemongrass, galangal, chili, and shrimp paste pounded in a stone mortar. Never blended — the texture matters.", tool: "mortar-and-pestle", emoji: "⚱️" },
+    ],
+    dialectPhrases: [
+      { phrase: "Mau petis", pronunciation: "mow peh-tis", meaning: "I want shrimp paste", dialect: "Malay", context: "Ask for extra shrimp paste on the side" },
+      { phrase: "Sedap!", pronunciation: "seh-dahp", meaning: "Delicious!", dialect: "Malay", context: "Compliment the hawker — they'll beam" },
+    ],
     cookingOrder: ["laksa-mackerel", "laksa-tamarind", "laksa-shrimp", "laksa-noodle", "laksa-torch"],
     ingredients: [
       { id: "laksa-noodle", name: "Thick Rice Noodles", local_name: "Laksa Noodles", category: "starch", color: "#f5f5dc", emoji: "🍜", geometry: "cylinder", position: [0, 0, 0], lore_hint: "Hand-pressed rice noodle making in northern Malaysia", cookingHint: "Add the thick noodles into the sour broth" },
@@ -60,6 +90,14 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Penang",
     heritage_score: 88,
     fun_fact: "Called 'Oh Chien' in Hokkien — the batter uses sweet potato starch for that signature crispy-gooey texture.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Hokkien and Teochew immigrants brought oyster omelette from Fujian province, adapting it with local sweet potato starch in Penang's port markets",
+    techniques: [
+      { id: "oc-t1", name: "Starch Batter Spread", description: "Sweet potato starch mixed to exact consistency — too thick and it's gummy, too thin and it won't crisp. Spread thin on a blazing flat griddle.", tool: "griddle", emoji: "🫓" },
+    ],
+    dialectPhrases: [
+      { phrase: "Oh chien", pronunciation: "oh chee-en", meaning: "Oyster omelette", dialect: "Hokkien", context: "How to order it at the stall — say the Hokkien name" },
+    ],
     cookingOrder: ["oc-starch", "oc-oyster", "oc-egg", "oc-chili"],
     ingredients: [
       { id: "oc-oyster", name: "Fresh Oysters", local_name: "Oh", category: "protein", color: "#c0c0c0", emoji: "🦪", geometry: "sphere", position: [0, 0, 0], lore_hint: "Oyster farming in the Penang strait", cookingHint: "Drop in the fresh oysters — they sizzle on contact!" },
@@ -76,6 +114,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Selangor",
     heritage_score: 91,
     fun_fact: "Literally 'meat bone tea' — Chinese coolies drank it for energy during the tin mining era.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Hokkien and Teochew tin miners in the Klang Valley brewed herbal pork rib soup for sustenance in the 1900s — it spread from mining camps to shophouses",
+    techniques: [
+      { id: "bkt-t1", name: "Herbal Sachet Brewing", description: "A cloth sachet of dang gui, star anise, cinnamon, cloves, and wolfberries simmered for 3+ hours. Traditional Chinese medicine meets comfort food.", tool: "clay-pot", emoji: "🌿" },
+      { id: "bkt-t2", name: "Clay Pot Simmering", description: "Earthenware retains heat evenly. The clay imparts a mineral note that metal pots can't replicate.", tool: "clay-pot", emoji: "🏺" },
+    ],
+    dialectPhrases: [
+      { phrase: "Yao char kuey", pronunciation: "yow char kway", meaning: "Fried dough stick (to dip)", dialect: "Hokkien", context: "Order the crispy you tiao to dip in the soup" },
+      { phrase: "Ka teh", pronunciation: "kah teh", meaning: "Add tea", dialect: "Hokkien", context: "Request a refill of Chinese tea — always free" },
+    ],
     cookingOrder: ["bkt-herbs", "bkt-ribs", "bkt-garlic", "bkt-pepper", "bkt-tea"],
     ingredients: [
       { id: "bkt-ribs", name: "Pork Ribs", local_name: "Bak Kut", category: "protein", color: "#cd853f", emoji: "🍖", geometry: "cylinder", position: [0, 0, 0], lore_hint: "Hokkien and Teochew pork rib preparation traditions", cookingHint: "Add the ribs to the herbal broth — low and slow" },
@@ -93,6 +141,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "KL",
     heritage_score: 85,
     fun_fact: "The dough is hand-flipped and stretched paper-thin, then folded into layers — similar to Indian paratha but uniquely Malaysian.",
+    culturalOrigin: "Mamak",
+    migrationStoryHint: "South Indian Muslim traders brought paratha to Malaya — mamak stalls adapted it into roti canai, the 24-hour flatbread culture unique to Malaysia",
+    techniques: [
+      { id: "rc-t1", name: "Dough Flipping", description: "The roti maker spins dough in the air, stretching it paper-thin by centrifugal force. Years of practice to get it translucent without tearing.", tool: "hands", emoji: "🤲" },
+      { id: "rc-t2", name: "Griddle Folding", description: "Stretched dough slapped onto a hot griddle, folded into layers while cooking. The layers create the signature flaky texture.", tool: "griddle", emoji: "🫓" },
+    ],
+    dialectPhrases: [
+      { phrase: "Roti kosong", pronunciation: "roh-tee koh-song", meaning: "Plain roti", dialect: "Malay", context: "Order the classic plain version" },
+      { phrase: "Teh tarik satu", pronunciation: "teh tah-rik sah-too", meaning: "One pulled tea", dialect: "Malay", context: "Pair with Malaysia's signature pulled milk tea" },
+    ],
     cookingOrder: ["rc-ghee", "rc-dough", "rc-dhal", "rc-sambal"],
     ingredients: [
       { id: "rc-dough", name: "Stretched Dough", local_name: "Roti", category: "starch", color: "#f5deb3", emoji: "🫓", geometry: "torus", position: [0, 0, 0], lore_hint: "Indian Muslim hand-stretching technique for flaky bread", cookingHint: "Slap the stretched dough onto the hot griddle — listen for the sizzle" },
@@ -109,6 +167,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "KL",
     heritage_score: 90,
     fun_fact: "Malaysia's unofficial national dish — eaten for breakfast, lunch, dinner, and supper. It literally means 'rich rice'.",
+    culturalOrigin: "Malay",
+    migrationStoryHint: "Indigenous Malay dish rooted in kampung rice farming — coconut rice wrapped in banana leaf became the workers' portable meal across the peninsula",
+    techniques: [
+      { id: "nl-t1", name: "Coconut Rice Steaming", description: "Rice soaked in freshly squeezed coconut milk with pandan knots, then steamed until each grain is glossy and fragrant.", tool: "steamer", emoji: "🍚" },
+      { id: "nl-t2", name: "Sambal Tumis", description: "Dried chili, shallots, and dried shrimp slow-fried for 45+ minutes until the oil separates. Sweet-spicy-savory perfection.", tool: "wok", emoji: "🌶️" },
+    ],
+    dialectPhrases: [
+      { phrase: "Bungkus satu", pronunciation: "boong-koos sah-too", meaning: "Pack one (to go)", dialect: "Malay", context: "Order nasi lemak wrapped in banana leaf" },
+      { phrase: "Tambah telur", pronunciation: "tahm-bah teh-loor", meaning: "Add an egg", dialect: "Malay", context: "Ask for an extra egg on your nasi lemak" },
+    ],
     cookingOrder: ["nl-rice", "nl-sambal", "nl-ikan", "nl-egg", "nl-peanut"],
     ingredients: [
       { id: "nl-rice", name: "Coconut Rice", local_name: "Nasi Lemak", category: "starch", color: "#fffdd0", emoji: "🍚", geometry: "cone", position: [0, 0, 0], lore_hint: "Pandan-scented coconut rice steaming technique", cookingHint: "Steam the coconut rice with pandan leaf — fragrance is key" },
@@ -126,6 +194,14 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "KL",
     heritage_score: 87,
     fun_fact: "Teochew braised duck uses a master stock that some shops claim is decades old — never fully discarded.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Teochew immigrants from eastern Guangdong brought braised duck traditions to Malaysia's tin mining towns — the master stock concept survived generations",
+    techniques: [
+      { id: "dr-t1", name: "Master Stock Braising", description: "A continuously replenished stock of soy, five spice, star anise, and cinnamon. Some shops have stocks dating back 30+ years — never fully discarded.", tool: "clay-pot", emoji: "🏺" },
+    ],
+    dialectPhrases: [
+      { phrase: "Ah kah", pronunciation: "ah kah", meaning: "Duck leg (best cut)", dialect: "Hokkien", context: "Request the leg piece — meatiest and most flavorful" },
+    ],
     cookingOrder: ["dr-fivespice", "dr-duck", "dr-tofu", "dr-rice"],
     ingredients: [
       { id: "dr-duck", name: "Braised Duck", local_name: "Lu Ah", category: "protein", color: "#8b4513", emoji: "🦆", geometry: "cylinder", position: [0, 0, 0], lore_hint: "Teochew braised duck and the master stock tradition", cookingHint: "Simmer the duck in the master stock — patience is the secret" },
@@ -142,6 +218,15 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Perak",
     heritage_score: 95,
     fun_fact: "Ipoh's limestone-filtered water makes the bean sprouts uniquely fat, crunchy, and sweet.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Cantonese poached chicken technique merged with Ipoh's unique limestone water that produces famously plump bean sprouts — geology shaped cuisine",
+    techniques: [
+      { id: "bsc-t1", name: "Ice Bath Poaching", description: "Chicken poached just below boiling, then plunged into ice water. The thermal shock gives the skin a jelly-like texture while keeping the meat silky.", tool: "pot", emoji: "🧊" },
+    ],
+    dialectPhrases: [
+      { phrase: "Kai fan", pronunciation: "kai fahn", meaning: "Chicken rice", dialect: "Cantonese", context: "How locals in Ipoh order this dish" },
+      { phrase: "Sar hor fun", pronunciation: "sah hor fahn", meaning: "Add hor fun noodles", dialect: "Cantonese", context: "Pair your chicken with Ipoh's famous silky noodles" },
+    ],
     cookingOrder: ["bsc-chicken", "bsc-oil", "bsc-sprouts", "bsc-soy"],
     ingredients: [
       { id: "bsc-chicken", name: "Poached Chicken", local_name: "Kai", category: "protein", color: "#ffd700", emoji: "🍗", geometry: "cone", position: [0, 0, 0], lore_hint: "The ice-bath poaching technique for silky chicken skin", cookingHint: "Poach the chicken gently — then ice bath for silky skin" },
@@ -158,6 +243,14 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Perak",
     heritage_score: 93,
     fun_fact: "The silky smooth texture comes from Ipoh's water — rich in minerals from limestone hills surrounding the city.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Cantonese immigrants adapted Guangzhou's hor fun using Ipoh's mineral-rich limestone water — creating a noodle so smooth it could only exist here",
+    techniques: [
+      { id: "ihf-t1", name: "Double-Boiled Broth", description: "Prawn shells and chicken bones simmered separately, then combined. The layered extraction creates a broth with depth no single-stock can match.", tool: "pot", emoji: "🍲" },
+    ],
+    dialectPhrases: [
+      { phrase: "Hor fun thong", pronunciation: "hor fahn tong", meaning: "Hor fun in soup", dialect: "Cantonese", context: "Order the soup version rather than dry-fried" },
+    ],
     cookingOrder: ["ihf-prawn", "ihf-chicken", "ihf-noodle", "ihf-spring"],
     ingredients: [
       { id: "ihf-noodle", name: "Silky Flat Noodles", local_name: "Hor Fun", category: "starch", color: "#f5f5f5", emoji: "🍜", geometry: "box", position: [0, 0, 0], lore_hint: "How limestone-filtered water makes Ipoh hor fun uniquely smooth", cookingHint: "Slide the silky noodles into the hot broth" },
@@ -174,6 +267,16 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Perak",
     heritage_score: 89,
     fun_fact: "Ipoh dim sum is famously cheaper and arguably better than KL's — a legacy of the city's Cantonese tin mining community.",
+    culturalOrigin: "Chinese",
+    migrationStoryHint: "Cantonese tin miners brought yum cha culture from Guangdong — Ipoh's dim sum houses became gathering places where miners shared news over dumplings",
+    techniques: [
+      { id: "ds-t1", name: "Crystal Wrapper Folding", description: "Wheat starch dough rolled translucent, pleated into 13 folds minimum. The wrapper must be thin enough to see the pink prawn filling through it.", tool: "rolling-pin", emoji: "🥟" },
+      { id: "ds-t2", name: "Bamboo Steaming", description: "Stacked bamboo steamers allow steam to circulate while absorbing excess moisture. The bamboo imparts a subtle woodsy fragrance.", tool: "bamboo-steamer", emoji: "🎍" },
+    ],
+    dialectPhrases: [
+      { phrase: "Yum cha", pronunciation: "yam chah", meaning: "Drink tea (go for dim sum)", dialect: "Cantonese", context: "Invite someone for dim sum — the meal is named after the tea" },
+      { phrase: "Mai dan", pronunciation: "my dahn", meaning: "Check please", dialect: "Cantonese", context: "Ask for the bill when you're done" },
+    ],
     cookingOrder: ["ds-hargaw", "ds-siumai", "ds-cheong", "ds-char", "ds-tea"],
     ingredients: [
       { id: "ds-hargaw", name: "Har Gow", local_name: "虾饺", category: "protein", color: "#ffe4e1", emoji: "🥟", geometry: "sphere", position: [0, 0, 0], lore_hint: "Crystal prawn dumpling wrapper technique", cookingHint: "Steam the har gow first — 7 minutes, translucent wrappers" },
@@ -191,6 +294,15 @@ export const POKEDEX_ENTRIES: DishEntry[] = [
     origin_state: "Perak",
     heritage_score: 86,
     fun_fact: "A fusion of Melaka's Portuguese pastéis de nata with local pandan — the custard is infused with pandan leaf.",
+    culturalOrigin: "Portuguese",
+    migrationStoryHint: "Portuguese colonizers in 16th-century Melaka left behind pastéis de nata — centuries later, Ipoh kopitiam bakers infused the custard with local pandan",
+    techniques: [
+      { id: "pet-t1", name: "Laminated Pastry", description: "Butter folded into dough in layers, chilled, and re-rolled. Each fold doubles the layers — 6 folds creates 729 layers of flaky pastry.", tool: "rolling-pin", emoji: "🥐" },
+      { id: "pet-t2", name: "Custard Torching", description: "High heat blisters the custard surface into caramelized spots. The contrast between cool custard and burnt sugar is the signature.", tool: "torch", emoji: "🔥" },
+    ],
+    dialectPhrases: [
+      { phrase: "Daan taat", pronunciation: "dahn taht", meaning: "Egg tart", dialect: "Cantonese", context: "Order at the kopitiam counter" },
+    ],
     cookingOrder: ["pet-pastry", "pet-pandan", "pet-custard", "pet-sugar"],
     ingredients: [
       { id: "pet-pastry", name: "Puff Pastry", local_name: "Kulit Tart", category: "starch", color: "#f5deb3", emoji: "🥐", geometry: "torus", position: [0, 0, 0], lore_hint: "Portuguese pastry-making traditions brought to Melaka", cookingHint: "Line the molds with buttery puff pastry shells" },

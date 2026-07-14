@@ -5,22 +5,20 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { POKEDEX_ENTRIES } from "@/lib/data/pokedex-entries";
 import { usePokedexStore } from "@/store/usePokedexStore";
-import { useAppStore } from "@/store/useAppStore";
-import { isDishDiscovered } from "@/lib/data/regions";
+import { useCardStore } from "@/store/useCardStore";
 import { IngredientLore } from "@/types/ai";
+import type { MigrationStory, CardTier } from "@/types/card";
+import type { NodeCategory } from "@/components/blueprint/BlueprintNode";
+import { generateQuiz } from "@/lib/quiz/quiz-generator";
 import DishMetaCard from "@/components/pokedex/DishMetaCard";
-import IngredientLoreOverlay from "@/components/pokedex/IngredientLoreOverlay";
+import NodeDetailOverlay from "@/components/blueprint/NodeDetailOverlay";
+import QuizChallenge from "@/components/evolve/QuizChallenge";
+import CardEvolution from "@/components/evolve/CardEvolution";
 import LoadingPulse from "@/components/ui/LoadingPulse";
-import GlowButton from "@/components/ui/GlowButton";
 
 const DishCanvas = dynamic(() => import("@/components/pokedex/DishCanvas"), {
   ssr: false,
-  loading: () => <LoadingPulse text="Loading 3D scene..." />,
-});
-
-const CookingScene = dynamic(() => import("@/components/pokedex/CookingScene"), {
-  ssr: false,
-  loading: () => <LoadingPulse text="Firing up the wok..." />,
+  loading: () => <LoadingPulse text="Loading blueprint..." />,
 });
 
 export default function PokedexPage() {
@@ -28,156 +26,300 @@ export default function PokedexPage() {
   const dishId = params.dishId as string;
   const dish = POKEDEX_ENTRIES.find((d) => d.id === dishId);
 
-  const cookDish = usePokedexStore((s) => s.cookDish);
-  const cookedDishes = usePokedexStore((s) => s.cookedDishes);
   const getLore = usePokedexStore((s) => s.getLore);
   const cacheLore = usePokedexStore((s) => s.cacheLore);
-  const discoveredNodes = useAppStore((s) => s.discoveredNodes);
 
-  const isCooked = dish ? cookedDishes.includes(dish.id) : false;
-  const isDiscovered = dish ? isDishDiscovered(dish.id, discoveredNodes) : false;
+  const addExploredNode = useCardStore((s) => s.addExploredNode);
+  const exploredNodes = useCardStore((s) => s.exploredNodes);
+  const heritageUnlocked = useCardStore((s) => s.getHeritageUnlockedTotal());
+  const cards = useCardStore((s) => s.cards);
+  const evolveCard = useCardStore((s) => s.evolveCard);
+  const updateAkarScore = useCardStore((s) => s.updateAkarScore);
 
-  const [mode, setMode] = useState<"browse" | "cook">("browse");
-  const [activeIngredientId, setActiveIngredientId] = useState<string | null>(null);
+  const card = cards.find((c) => c.dishId === dishId);
+  const canEvolve = card && card.tier !== "gold";
+
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<NodeCategory | null>(null);
   const [lore, setLore] = useState<IngredientLore | null>(null);
   const [loadingLore, setLoadingLore] = useState(false);
+  const [migrationStory, setMigrationStory] = useState<MigrationStory | null>(null);
+  const [loadingMigration, setLoadingMigration] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [showEvolution, setShowEvolution] = useState(false);
+  const [evolutionFrom, setEvolutionFrom] = useState<CardTier>("bronze");
+  const [evolutionTo, setEvolutionTo] = useState<CardTier>("silver");
 
-  const handleCookingComplete = useCallback(() => {
-    if (dish) {
-      cookDish(dish.id);
-      setMode("browse");
-    }
-  }, [dish, cookDish]);
+  const exploredNodeIds = dish ? (exploredNodes[dish.id] ?? []) : [];
+
+  const handleNodeTap = useCallback(
+    async (nodeId: string, category: NodeCategory) => {
+      if (!dish) return;
+
+      if (activeNodeId === nodeId) {
+        setActiveNodeId(null);
+        setActiveCategory(null);
+        setLore(null);
+        return;
+      }
+
+      setActiveNodeId(nodeId);
+      setActiveCategory(category);
+      setLore(null);
+      setMigrationStory(null);
+
+      addExploredNode(dish.id, nodeId);
+
+      if (category === "ingredient") {
+        const ingredient = dish.ingredients.find((i) => i.id === nodeId);
+        if (!ingredient) return;
+
+        const cacheKey = `${dishId}:${nodeId}`;
+        const cached = getLore(cacheKey);
+        if (cached) {
+          setLore(cached);
+          return;
+        }
+
+        setLoadingLore(true);
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            body: JSON.stringify({
+              mode: "lore",
+              ingredient: ingredient.name,
+              dish: dish.name,
+              lore_hint: ingredient.lore_hint,
+            }),
+            headers: { "Content-Type": "application/json" },
+          });
+          const data = await response.json();
+          if (data.result) {
+            setLore(data.result as IngredientLore);
+            cacheLore(cacheKey, data.result);
+          }
+        } catch (err) {
+          console.error("Lore fetch error:", err);
+        } finally {
+          setLoadingLore(false);
+        }
+      }
+
+      if (category === "migration") {
+        setLoadingMigration(true);
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            body: JSON.stringify({
+              mode: "migration",
+              migrationHint: dish.migrationStoryHint,
+            }),
+            headers: { "Content-Type": "application/json" },
+          });
+          const data = await response.json();
+          if (data.result) {
+            setMigrationStory(data.result as MigrationStory);
+          }
+        } catch (err) {
+          console.error("Migration fetch error:", err);
+        } finally {
+          setLoadingMigration(false);
+        }
+      }
+    },
+    [dish, dishId, activeNodeId, addExploredNode, getLore, cacheLore]
+  );
 
   if (!dish) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-gray-400">Dish not found</p>
+        <p className="text-[var(--text-muted)]">Dish not found</p>
       </div>
     );
   }
 
+  const activeIngredient = activeCategory === "ingredient"
+    ? dish.ingredients.find((i) => i.id === activeNodeId) ?? null
+    : null;
 
-  const activeIngredient = dish.ingredients.find((i) => i.id === activeIngredientId) || null;
+  const activeTechnique = activeCategory === "technique"
+    ? dish.techniques?.find((t) => t.id === activeNodeId) ?? null
+    : null;
 
-  const handleIngredientTap = async (ingredientId: string) => {
-    if (activeIngredientId === ingredientId) {
-      setActiveIngredientId(null);
-      setLore(null);
-      return;
-    }
+  const activeDialectIndex = activeCategory === "dialect" && activeNodeId
+    ? parseInt(activeNodeId.split("-").pop() ?? "-1", 10)
+    : -1;
+  const activeDialect = activeCategory === "dialect" && activeDialectIndex >= 0
+    ? dish.dialectPhrases?.[activeDialectIndex] ?? null
+    : null;
 
-    setActiveIngredientId(ingredientId);
-    setLore(null);
-
-    const cacheKey = `${dishId}:${ingredientId}`;
-    const cached = getLore(cacheKey);
-    if (cached) {
-      setLore(cached);
-      return;
-    }
-
-    const ingredient = dish.ingredients.find((i) => i.id === ingredientId)!;
-    setLoadingLore(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          mode: "lore",
-          ingredient: ingredient.name,
-          dish: dish.name,
-          lore_hint: ingredient.lore_hint,
-        }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const data = await response.json();
-      if (data.result) {
-        const loreData = data.result as IngredientLore;
-        setLore(loreData);
-        cacheLore(cacheKey, loreData);
-      }
-    } catch (err) {
-      console.error("Lore fetch error:", err);
-    } finally {
-      setLoadingLore(false);
-    }
-  };
+  const totalNodes =
+    dish.ingredients.length +
+    (dish.techniques?.length ?? 0) +
+    1 + // migration
+    (dish.dialectPhrases?.length ?? 0);
+  const exploredCount = exploredNodeIds.length;
 
   return (
     <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e]/80 backdrop-blur-sm z-10">
-        <Link href="/pokedex" className="text-gray-400 hover:text-white">
-          ← Pokedex
+      <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
+        <Link href="/pokedex" className="text-[var(--text-muted)] hover:text-[var(--foreground)] text-sm">
+          &larr; Collection
         </Link>
-        <h1 className="text-sm font-bold text-[#39ff14]">
-          {mode === "cook" ? "Cooking Mode" : "Pokedex"}
-        </h1>
-        <div className="w-12" />
+        <h1 className="text-sm font-bold text-[var(--accent-primary)]">Heritage Blueprint</h1>
+        <div className="text-right">
+          <p className="text-[10px] text-[var(--text-muted)]">Heritage Unlocked</p>
+          <p className="text-sm font-bold text-[var(--accent-secondary)]">{heritageUnlocked}</p>
+        </div>
       </div>
 
       <div className="px-4 py-3">
         <DishMetaCard dish={dish} />
       </div>
 
-      {/* Mode toggle */}
-      {mode === "browse" && (
-        <div className="flex items-center justify-center gap-3 px-4 pb-3">
-          <button
-            onClick={() => setMode("cook")}
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#ff6600] to-[#ff4500] px-4 py-2 text-sm font-bold text-white shadow-[0_0_15px_#ff660044] transition-all hover:shadow-[0_0_25px_#ff660088] active:scale-95"
-          >
-            🔥 {isCooked ? "Cook Again" : "Cook This Dish"}
-          </button>
-          {isCooked && (
-            <span className="text-xs text-[#ffd700] font-bold">✓ Mastered</span>
-          )}
-        </div>
-      )}
-
-      {mode === "cook" && (
-        <div className="flex items-center justify-center px-4 pb-2">
-          <button
-            onClick={() => setMode("browse")}
-            className="text-xs text-gray-400 hover:text-white underline"
-          >
-            ← Back to browse
-          </button>
-        </div>
-      )}
-
-      {mode === "browse" && (
-        <p className="text-center text-xs text-gray-500 mb-2">
-          Tap an ingredient to discover its story
-        </p>
-      )}
-
-      {/* 3D Canvas */}
-      <div className="relative flex-1">
-        {mode === "cook" ? (
-          <CookingScene dish={dish} onComplete={handleCookingComplete} />
-        ) : (
-          <DishCanvas
-            dish={dish}
-            onIngredientTap={handleIngredientTap}
-            activeIngredientId={activeIngredientId}
+      {/* Node progress */}
+      <div className="px-4 pb-2 flex items-center gap-2">
+        <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-dark)] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-[var(--accent-secondary)] transition-all duration-500"
+            style={{ width: `${(exploredCount / totalNodes) * 100}%` }}
           />
-        )}
+        </div>
+        <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+          {exploredCount}/{totalNodes} explored
+        </span>
+      </div>
 
-        {mode === "browse" && activeIngredient && (
-          <IngredientLoreOverlay
-            ingredient={activeIngredient}
-            lore={lore}
-            loading={loadingLore}
+      {/* Legend */}
+      <div className="px-4 pb-2 flex flex-wrap gap-2">
+        {[
+          { label: "Ingredients", color: "#4a7c59", count: dish.ingredients.length },
+          { label: "Techniques", color: "#c4553a", count: dish.techniques?.length ?? 0 },
+          { label: "Migration", color: "#d4a947", count: 1 },
+          { label: "Dialect", color: "#6b5ce7", count: dish.dialectPhrases?.length ?? 0 },
+        ].map((cat) => (
+          <span
+            key={cat.label}
+            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+            style={{ background: `${cat.color}15`, color: cat.color, border: `1px solid ${cat.color}33` }}
+          >
+            {cat.label} ({cat.count})
+          </span>
+        ))}
+      </div>
+
+      {/* Evolve button */}
+      {canEvolve && (
+        <div className="px-4 pb-2 flex justify-center">
+          <button
+            onClick={() => setShowQuiz(true)}
+            className="px-6 py-2.5 rounded-full font-bold text-sm text-white shadow-[0_4px_0_var(--border)] hover:translate-y-[2px] hover:shadow-[0_2px_0_var(--border)] active:translate-y-[4px] active:shadow-none transition-all animate-pulse-warm"
+            style={{
+              background: card.tier === "bronze" ? "var(--tier-silver)" : "var(--tier-gold)",
+            }}
+          >
+            ⚡ Evolve to {card.tier === "bronze" ? "Silver" : "Gold"}
+          </button>
+        </div>
+      )}
+      {card && card.tier === "gold" && (
+        <div className="px-4 pb-2 text-center">
+          <span className="text-xs font-bold text-[var(--tier-gold)]">🥇 Fully Evolved</span>
+        </div>
+      )}
+
+      <p className="text-center text-xs text-[var(--text-muted)] mb-1">
+        Tap any node to explore its heritage
+      </p>
+
+      {/* 3D Blueprint Canvas */}
+      <div className="relative flex-1">
+        <DishCanvas
+          dish={dish}
+          onNodeTap={handleNodeTap}
+          activeNodeId={activeNodeId}
+          exploredNodeIds={exploredNodeIds}
+        />
+
+        {/* Node detail overlays */}
+        {activeNodeId && activeCategory === "ingredient" && activeIngredient && (
+          <NodeDetailOverlay
+            node={{ kind: "ingredient", data: activeIngredient, lore, loading: loadingLore }}
             onClose={() => {
-              setActiveIngredientId(null);
+              setActiveNodeId(null);
+              setActiveCategory(null);
               setLore(null);
             }}
           />
         )}
+
+        {activeNodeId && activeCategory === "technique" && activeTechnique && (
+          <NodeDetailOverlay
+            node={{ kind: "technique", data: activeTechnique }}
+            onClose={() => {
+              setActiveNodeId(null);
+              setActiveCategory(null);
+            }}
+          />
+        )}
+
+        {activeNodeId && activeCategory === "migration" && (
+          <NodeDetailOverlay
+            node={{
+              kind: "migration",
+              data: migrationStory,
+              hint: dish.migrationStoryHint ?? "",
+              loading: loadingMigration,
+            }}
+            onClose={() => {
+              setActiveNodeId(null);
+              setActiveCategory(null);
+              setMigrationStory(null);
+            }}
+          />
+        )}
+
+        {activeNodeId && activeCategory === "dialect" && activeDialect && (
+          <NodeDetailOverlay
+            node={{ kind: "dialect", data: activeDialect }}
+            onClose={() => {
+              setActiveNodeId(null);
+              setActiveCategory(null);
+            }}
+          />
+        )}
       </div>
+
+      {/* Quiz overlay */}
+      {showQuiz && dish && (
+        <QuizChallenge
+          questions={generateQuiz(dish, 3)}
+          onComplete={(passed, _score) => {
+            setShowQuiz(false);
+            if (passed && card) {
+              const fromTier = card.tier;
+              const toTier = fromTier === "bronze" ? "silver" : "gold";
+              setEvolutionFrom(fromTier);
+              setEvolutionTo(toTier as CardTier);
+              evolveCard(card.id);
+              updateAkarScore(card.id, 10);
+              setShowEvolution(true);
+            }
+          }}
+          onClose={() => setShowQuiz(false)}
+        />
+      )}
+
+      {/* Evolution animation */}
+      {showEvolution && dish && (
+        <CardEvolution
+          fromTier={evolutionFrom}
+          toTier={evolutionTo}
+          dishName={dish.name}
+          onComplete={() => setShowEvolution(false)}
+        />
+      )}
     </div>
   );
 }

@@ -6,9 +6,11 @@ import { useAppStore } from "@/store/useAppStore";
 import { getCurrentPosition } from "@/lib/gps";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { HeritageNode } from "@/types/heritage";
+import { computeAkarScore } from "@/lib/scoring/akar-score";
 import BottomSheet from "@/components/ui/BottomSheet";
 import GlowButton from "@/components/ui/GlowButton";
 import LoadingPulse from "@/components/ui/LoadingPulse";
+import ProximityGuide from "@/components/map/ProximityGuide";
 
 const RadarMap = dynamic(() => import("@/components/map/RadarMap"), {
   ssr: false,
@@ -51,21 +53,22 @@ export default function RadarPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a2e] z-20 relative">
-        <h1 className="text-sm font-bold text-[#39ff14]">Heritage Radar</h1>
-        <span className="text-xs text-gray-500">
-          {discoveredNodes.length}/12 discovered
+      <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)] border-b-2 border-[var(--border)] z-20 relative">
+        <h1 className="text-sm font-bold text-[var(--accent-primary)]">Heritage Radar</h1>
+        <span className="text-xs text-[var(--text-muted)]">
+          {discoveredNodes.length}/{HERITAGE_NODES.filter((n) => n.isGrassroots).length} discovered
         </span>
       </div>
 
       {gpsError && (
-        <div className="bg-yellow-900/30 text-yellow-300 text-xs text-center py-2">
+        <div className="bg-amber-50 text-amber-700 text-xs text-center py-2 border-b border-amber-200">
           GPS unavailable — showing all nodes without distance
         </div>
       )}
 
-      {/* Map — explicit height minus header and bottom nav */}
-      <div style={{ width: "100%", height: "calc(100dvh - 48px - 72px)" }}>
+      {/* Map + Proximity Guide */}
+      <div className="relative" style={{ width: "100%", height: "calc(100dvh - 48px - 72px)" }}>
+        <ProximityGuide nodes={HERITAGE_NODES} userPosition={gpsPosition} />
         <RadarMap
           nodes={HERITAGE_NODES}
           discoveredNodes={discoveredNodes}
@@ -80,31 +83,45 @@ export default function RadarPage() {
           <div className="space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold">{selectedNode.name}</h2>
-                <p className="text-sm text-gray-400">{selectedNode.city} · {selectedNode.type}</p>
+                <h2 className="text-lg font-bold text-[var(--foreground)]">{selectedNode.name}</h2>
+                <p className="text-sm text-[var(--text-muted)]">
+                  {selectedNode.city} · {selectedNode.type}
+                  <span className="ml-2 inline-block rounded-full bg-[var(--surface-dark)] px-2 py-0.5 text-xs">
+                    {selectedNode.culturalOrigin}
+                  </span>
+                </p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-[#39ff14]">{selectedNode.heritage_score}</div>
-                <div className="text-xs text-gray-500">Heritage Score</div>
+                <div className="text-2xl font-black text-[var(--accent-primary)]">
+                  {computeAkarScore(selectedNode)}
+                </div>
+                <div className="text-xs text-[var(--text-muted)]">Akar Score</div>
               </div>
             </div>
 
-            <p className="text-sm text-gray-300">{selectedNode.description}</p>
+            <p className="text-sm text-[var(--foreground)]">{selectedNode.description}</p>
 
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">
-                Signature: <span className="text-white font-medium">{selectedNode.signature_dish}</span>
+              <span className="text-[var(--text-muted)]">
+                Signature:{" "}
+                <span className="text-[var(--foreground)] font-medium">
+                  {selectedNode.signature_dish}
+                </span>
               </span>
               {gpsPosition && (
-                <span className="text-gray-500">
+                <span className="text-[var(--text-muted)]">
                   {formatDistance(distanceToNode(selectedNode)!)}
                 </span>
               )}
             </div>
 
             {selectedNode.founded && (
-              <p className="text-xs text-gray-500">Founded {selectedNode.founded}</p>
+              <p className="text-xs text-[var(--text-muted)]">Founded {selectedNode.founded}</p>
             )}
+
+            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span>{selectedNode.communityCatchCount} explorers caught this stall</span>
+            </div>
 
             <GlowButton
               onClick={() => {
@@ -112,7 +129,7 @@ export default function RadarPage() {
                 router.push("/scan");
               }}
             >
-              Capture This Stall
+              Catch This Stall
             </GlowButton>
           </div>
         )}

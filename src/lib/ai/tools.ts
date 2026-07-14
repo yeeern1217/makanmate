@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export const livenessCheckSchema = z.object({
+  isReal: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  reason: z.string(),
+});
+
 export const parseMenuSchema = z.object({
   dishes: z.array(z.object({
     raw_text: z.string(),
@@ -28,4 +34,34 @@ export const getIngredientLoreSchema = z.object({
   lore_text: z.string(),
   fun_fact: z.string(),
   origin_region: z.string(),
+});
+
+export const magicLensSchema = z.object({
+  items: z.array(z.object({
+    raw_text: z.string(),
+    english_name: z.string(),
+    local_name: z.string(),
+    price: z.string().optional(),
+    allergens: z.array(z.string()),
+    halal_status: z.enum(["halal", "non-halal", "unknown"]),
+    bounding_box: z.object({
+      x: z.number().min(0).max(100),
+      y: z.number().min(0).max(100),
+      width: z.number().min(0).max(100),
+      height: z.number().min(0).max(100),
+    }),
+  })),
+  confidence: z.number().min(0).max(1),
+});
+
+export const migrationStorySchema = z.object({
+  title: z.string(),
+  narrative: z.string(),
+  origin: z.string(),
+  era: z.string(),
+});
+
+export const trailNarrativeSchema = z.object({
+  historical_thread: z.string(),
+  cultural_connections: z.string(),
 });

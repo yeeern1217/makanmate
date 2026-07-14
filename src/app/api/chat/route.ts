@@ -1,8 +1,14 @@
 import { generateText, tool, isStepCount } from "ai";
 import { google } from "@ai-sdk/google";
 import { NextRequest, NextResponse } from "next/server";
-import { parseMenuSchema, validateLocationSchema, getIngredientLoreSchema } from "@/lib/ai/tools";
-import { SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE } from "@/lib/ai/prompts";
+import {
+  parseMenuSchema, validateLocationSchema, getIngredientLoreSchema,
+  livenessCheckSchema, magicLensSchema, migrationStorySchema, trailNarrativeSchema,
+} from "@/lib/ai/tools";
+import {
+  SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE, SYSTEM_PROMPT_LIVENESS,
+  SYSTEM_PROMPT_MAGIC_LENS, SYSTEM_PROMPT_MIGRATION, SYSTEM_PROMPT_TRAIL_NARRATIVE,
+} from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -13,8 +19,39 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractToolInput(result: any, toolName: string) {
+  const call = result.steps
+    .flatMap((s: any) => s.toolCalls)
+    .find((tc: any) => tc.toolName === toolName);
+  return call ? call.input : null;
+}
+
 export async function POST(req: NextRequest) {
-  const { image, lat, lng, mode, ingredient, dish, lore_hint } = await req.json();
+  const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = await req.json();
+
+  if (mode === "liveness") {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"),
+      system: SYSTEM_PROMPT_LIVENESS,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image" as const, image: `data:image/jpeg;base64,${image}` },
+          { type: "text" as const, text: "Is this a real in-person photo of a food stall, or a screenshot/photo-of-screen?" },
+        ],
+      }],
+      tools: {
+        livenessCheck: tool({ description: "Report liveness detection result", inputSchema: livenessCheckSchema }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({
+      toolName: "livenessCheck",
+      result: extractToolInput(result, "livenessCheck") ?? { isReal: true, confidence: 0.5, reason: "Unable to determine" },
+    });
+  }
 
   if (mode === "lore") {
     const result = await generateText({
@@ -22,30 +59,65 @@ export async function POST(req: NextRequest) {
       system: SYSTEM_PROMPT_INGREDIENT_LORE,
       messages: [{ role: "user", content: `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}` }],
       tools: {
-        getIngredientLore: tool({
-          description: "Generate cultural storytelling for an ingredient",
-          inputSchema: getIngredientLoreSchema,
-        }),
+        getIngredientLore: tool({ description: "Generate cultural storytelling for an ingredient", inputSchema: getIngredientLoreSchema }),
       },
       toolChoice: "required" as const,
       stopWhen: isStepCount(2),
     });
-
-    const loreCall = result.steps
-      .flatMap((s) => s.toolCalls)
-      .find((tc) => tc.toolName === "getIngredientLore");
-
-    return NextResponse.json({
-      toolName: "getIngredientLore",
-      result: loreCall ? (loreCall as unknown as { input: Record<string, unknown> }).input : null,
-    });
+    return NextResponse.json({ toolName: "getIngredientLore", result: extractToolInput(result, "getIngredientLore") });
   }
 
+  if (mode === "magic-lens") {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"),
+      system: SYSTEM_PROMPT_MAGIC_LENS,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image" as const, image: `data:image/jpeg;base64,${image}` },
+          { type: "text" as const, text: "Analyze this hawker menu. Provide translations, allergens, halal status, and approximate positions for each item." },
+        ],
+      }],
+      tools: {
+        magicLens: tool({ description: "Extract positioned menu items with allergen/halal info", inputSchema: magicLensSchema }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({ toolName: "magicLens", result: extractToolInput(result, "magicLens") });
+  }
+
+  if (mode === "migration") {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"),
+      system: SYSTEM_PROMPT_MIGRATION,
+      messages: [{ role: "user", content: `Tell the migration story: ${migrationHint}` }],
+      tools: {
+        migrationStory: tool({ description: "Generate migration story", inputSchema: migrationStorySchema }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({ toolName: "migrationStory", result: extractToolInput(result, "migrationStory") });
+  }
+
+  if (mode === "trail-narrative") {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"),
+      system: SYSTEM_PROMPT_TRAIL_NARRATIVE,
+      messages: [{ role: "user", content: `Generate a heritage trail narrative for these stalls: ${stalls}` }],
+      tools: {
+        trailNarrative: tool({ description: "Generate trail narrative", inputSchema: trailNarrativeSchema }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({ toolName: "trailNarrative", result: extractToolInput(result, "trailNarrative") });
+  }
+
+  // Default: vision mode
   const menuTools = {
-    parseMenu: tool({
-      description: "Extract dishes from hawker menu image",
-      inputSchema: parseMenuSchema,
-    }),
+    parseMenu: tool({ description: "Extract dishes from hawker menu image", inputSchema: parseMenuSchema }),
   };
 
   let locationResult = null;
@@ -54,12 +126,8 @@ export async function POST(req: NextRequest) {
     let minDist = Infinity;
     for (const node of HERITAGE_NODES) {
       const dist = haversineDistance(lat, lng, node.lat, node.lng);
-      if (dist < minDist) {
-        minDist = dist;
-        nearestNode = node;
-      }
+      if (dist < minDist) { minDist = dist; nearestNode = node; }
     }
-
     locationResult = {
       nearest_node_id: nearestNode && minDist < 500 ? nearestNode.id : null,
       nearest_node_name: nearestNode && minDist < 500 ? nearestNode.name : null,
@@ -83,12 +151,8 @@ export async function POST(req: NextRequest) {
     stopWhen: isStepCount(3),
   });
 
-  const menuCall = result.steps
-    .flatMap((s) => s.toolCalls)
-    .find((tc) => tc.toolName === "parseMenu");
-
   return NextResponse.json({
-    menu: menuCall ? (menuCall as unknown as { input: Record<string, unknown> }).input : null,
+    menu: extractToolInput(result, "parseMenu"),
     location: locationResult,
   });
 }

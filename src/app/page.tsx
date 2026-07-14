@@ -1,85 +1,90 @@
 "use client";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import GlowButton from "@/components/ui/GlowButton";
-import { useAppStore } from "@/store/useAppStore";
-import { usePokedexStore } from "@/store/usePokedexStore";
-import { REGIONS, getDishesByRegion, isDishDiscovered } from "@/lib/data/regions";
+import { useCardStore } from "@/store/useCardStore";
 
-const regionDishes = getDishesByRegion();
+const HOOK_TEXT =
+  "Somewhere near you, a 3rd-generation stall is about to disappear from the map — and its story is buried in a PDF nobody reads.";
+
+function AnimatedCounter({ value, label }: { value: number; label: string }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<number>(0);
+
+  useEffect(() => {
+    if (value === 0) {
+      setDisplay(0);
+      return;
+    }
+    const start = ref.current;
+    const diff = value - start;
+    const duration = 1200;
+    const t0 = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - t0;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(start + diff * eased);
+      setDisplay(current);
+      if (progress < 1) requestAnimationFrame(tick);
+      else ref.current = value;
+    }
+
+    requestAnimationFrame(tick);
+  }, [value]);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-4xl font-black tabular-nums text-[var(--accent-primary)]">
+        {display}
+      </span>
+      <span className="text-xs font-semibold tracking-wide uppercase text-[var(--text-muted)]">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function TypewriterText({ text }: { text: string }) {
+  const [charCount, setCharCount] = useState(0);
+
+  useEffect(() => {
+    if (charCount >= text.length) return;
+    const delay = charCount === 0 ? 600 : 35;
+    const timer = setTimeout(() => setCharCount((c) => c + 1), delay);
+    return () => clearTimeout(timer);
+  }, [charCount, text.length]);
+
+  return (
+    <p className="max-w-sm text-center text-lg leading-relaxed text-[var(--foreground)] font-serif min-h-[6rem]">
+      {text.slice(0, charCount)}
+      <span className="inline-block w-[2px] h-[1.1em] bg-[var(--accent-primary)] align-text-bottom animate-[blink-caret_0.8s_step-end_infinite] ml-0.5" />
+    </p>
+  );
+}
 
 export default function Home() {
-  const discoveredNodes = useAppStore((s) => s.discoveredNodes);
-  const cookedDishes = usePokedexStore((s) => s.cookedDishes);
-  const totalMastered = cookedDishes.length;
+  const akarTotal = useCardStore((s) => s.getAkarScoreTotal());
+  const heritageTotal = useCardStore((s) => s.getHeritageUnlockedTotal());
 
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6">
-      {/* Animated blob background */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="animate-blob absolute -top-40 -left-40 h-96 w-96 rounded-full bg-[#39ff14]/10 blur-3xl" />
-        <div className="animate-blob absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-[#39ff14]/5 blur-3xl [animation-delay:2s]" />
-        <div className="animate-blob absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ffd700]/5 blur-3xl [animation-delay:4s]" />
-      </div>
+      {/* Subtle aged-paper texture */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,var(--surface)_0%,var(--background)_70%)]" />
 
-      <h1 className="neon-text mb-4 text-5xl font-black tracking-tight sm:text-7xl">
+      <h1 className="retro-heading mb-6 text-5xl font-black tracking-tight sm:text-6xl">
         MakanMate
       </h1>
 
-      <p className="mb-6 max-w-md text-center text-lg text-gray-400">
-        Hunt. Cook. Discover Malaysian Heritage Food.
-      </p>
+      <TypewriterText text={HOOK_TEXT} />
 
-      {/* Overall mastered bar */}
-      <div className="mb-4 w-full max-w-xs">
-        <div className="mb-2 flex justify-between text-sm text-gray-400">
-          <span>Dishes Mastered</span>
-          <span className="text-[#ffd700] font-bold">{totalMastered}/12</span>
-        </div>
-        <div className="h-2 w-full rounded-full bg-[#1a1a2e]">
-          <div
-            className="h-full rounded-full bg-[#ffd700] shadow-[0_0_10px_#ffd700] transition-all duration-500"
-            style={{ width: `${(totalMastered / 12) * 100}%` }}
-          />
-        </div>
+      <div className="my-8 flex gap-12">
+        <AnimatedCounter value={akarTotal} label="Akar Score" />
+        <div className="w-px bg-[var(--border)]" />
+        <AnimatedCounter value={heritageTotal} label="Heritage Unlocked" />
       </div>
 
-      {/* Per-region breakdown */}
-      <div className="mb-6 w-full max-w-xs space-y-2">
-        {REGIONS.map((region) => {
-          const dishes = regionDishes.get(region) ?? [];
-          const found = dishes.filter((d) => isDishDiscovered(d.id, discoveredNodes)).length;
-          const mastered = dishes.filter((d) => cookedDishes.includes(d.id)).length;
-          const total = dishes.length;
-          const allMastered = mastered === total;
-
-          return (
-            <div key={region.id} className="flex items-center gap-2 text-xs">
-              <span className="text-base">{region.emoji}</span>
-              <span className="text-gray-400 w-14">{region.name}</span>
-              <div className="flex-1 h-1.5 rounded-full bg-[#1a1a2e]">
-                <div
-                  className="h-full rounded-full bg-[#ffd700] transition-all duration-500"
-                  style={{ width: `${(mastered / total) * 100}%` }}
-                />
-              </div>
-              <span className="text-gray-500 w-12 text-right">
-                <span className={mastered > 0 ? "text-[#ffd700] font-bold" : ""}>{mastered}</span>/{total}
-              </span>
-              {allMastered && <span className="text-xs">{"\u{1F3C6}"}</span>}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-col items-center gap-3">
-        <GlowButton href="/radar">Start the Hunt</GlowButton>
-        <Link
-          href="/pokedex"
-          className="text-sm text-gray-400 hover:text-[#39ff14] transition-colors underline underline-offset-2"
-        >
-          View Pokedex
-        </Link>
-      </div>
+      <GlowButton href="/radar">Begin the Trail</GlowButton>
     </div>
   );
 }

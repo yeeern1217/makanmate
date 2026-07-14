@@ -1,3 +1,5 @@
+import { CulturalOrigin, DialectPhrase, TechniqueNode } from "./card";
+
 export type StallType = "kopitiam" | "hawker" | "warung" | "mamak";
 
 export interface HeritageNode {
@@ -12,6 +14,10 @@ export interface HeritageNode {
   dish_id: string;
   description: string;
   founded?: number;
+  culturalOrigin: CulturalOrigin;
+  reviewCount: number;
+  isGrassroots: boolean;
+  communityCatchCount: number;
 }
 
 export interface IngredientNode {
@@ -37,4 +43,8 @@ export interface DishEntry {
   fun_fact: string;
   ingredients: IngredientNode[];
   cookingOrder: string[];
+  culturalOrigin: CulturalOrigin;
+  techniques: TechniqueNode[];
+  dialectPhrases: DialectPhrase[];
+  migrationStoryHint: string;
 }
