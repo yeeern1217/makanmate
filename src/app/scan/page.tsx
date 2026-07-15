@@ -81,10 +81,9 @@ export default function ScanPage() {
       // Step 3: Heritage node unlock + card creation
       if (data.location?.is_at_heritage_site && data.location.nearest_node_id) {
         const nodeId = data.location.nearest_node_id;
-        addDiscoveredNode(nodeId);
-
         const node = HERITAGE_NODES.find((n) => n.id === nodeId);
         if (node && node.isGrassroots) {
+          addDiscoveredNode(nodeId);
           const akarScore = computeAkarScore(node);
           const rarity = classifyRarity(akarScore);
           const card: CapturedCard = {

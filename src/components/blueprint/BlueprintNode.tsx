@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html, Billboard } from "@react-three/drei";
 import * as THREE from "three";
@@ -20,7 +20,7 @@ const CATEGORY_GLOW_OPACITY: Record<NodeCategory, number> = {
   dialect: 0.1,
 };
 
-export default function BlueprintNode({
+function BlueprintNode({
   id,
   emoji,
   label,
@@ -28,7 +28,7 @@ export default function BlueprintNode({
   position,
   isActive,
   isExplored,
-  onClick,
+  onSelect,
 }: {
   id: string;
   emoji: string;
@@ -37,7 +37,7 @@ export default function BlueprintNode({
   position: [number, number, number];
   isActive: boolean;
   isExplored: boolean;
-  onClick: () => void;
+  onSelect?: (id: string, category: NodeCategory) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Mesh>(null);
@@ -67,7 +67,7 @@ export default function BlueprintNode({
       <mesh
         onClick={(e) => {
           e.stopPropagation();
-          onClick();
+          onSelect?.(id, category);
         }}
       >
         <sphereGeometry args={[0.55, 8, 8]} />
@@ -119,3 +119,5 @@ export default function BlueprintNode({
     </group>
   );
 }
+
+export default memo(BlueprintNode);

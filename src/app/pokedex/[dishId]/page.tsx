@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -52,11 +52,18 @@ export default function PokedexPage() {
 
   const exploredNodeIds = dish ? (exploredNodes[dish.id] ?? []) : [];
 
+  // Mirror activeNodeId into a ref so handleNodeTap can stay stable across
+  // renders (otherwise every tap recreates it, defeating BlueprintNode memo).
+  const activeNodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeNodeIdRef.current = activeNodeId;
+  }, [activeNodeId]);
+
   const handleNodeTap = useCallback(
     async (nodeId: string, category: NodeCategory) => {
       if (!dish) return;
 
-      if (activeNodeId === nodeId) {
+      if (activeNodeIdRef.current === nodeId) {
         setActiveNodeId(null);
         setActiveCategory(null);
         setLore(null);
@@ -127,7 +134,7 @@ export default function PokedexPage() {
         }
       }
     },
-    [dish, dishId, activeNodeId, addExploredNode, getLore, cacheLore]
+    [dish, dishId, addExploredNode, getLore, cacheLore]
   );
 
   if (!dish) {

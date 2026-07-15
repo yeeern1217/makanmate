@@ -96,17 +96,105 @@ export default function TrailPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
         {/* No cards state */}
         {cards.length === 0 && (
-          <div className="text-center py-12 space-y-3">
-            <p className="text-4xl">🗺️</p>
-            <p className="text-sm text-[var(--text-muted)]">
-              Catch at least 3 stalls to build your first Heritage Trail!
+          <div className="flex flex-col items-center justify-center px-6 py-14 text-center animate-fade-in">
+            {/* Animated trail on a map — 3 stops along a winding route */}
+            <div className="relative mx-auto mb-8 h-56 w-full max-w-[23rem] overflow-hidden rounded-2xl border-2 border-[var(--border)]/60 bg-[var(--surface)]/60 shadow-inner">
+              {/* map texture — street grid */}
+              <div
+                aria-hidden
+                className="absolute inset-0 opacity-[0.35]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
+                  backgroundSize: "26px 26px",
+                }}
+              />
+              {/* terrain features */}
+              <div aria-hidden className="absolute -left-5 -top-4 h-16 w-24 rounded-full bg-[var(--accent-grassroots)]/15" />
+              <div aria-hidden className="absolute -bottom-5 right-8 h-16 w-28 rounded-[45%] bg-[#5b8bc4]/15" />
+              {/* map flourishes */}
+              <span className="absolute right-2.5 top-2 text-base opacity-40">🧭</span>
+
+              {/* winding route + a traveler moving along it */}
+              <svg
+                viewBox="0 0 240 130"
+                preserveAspectRatio="none"
+                fill="none"
+                className="absolute inset-0 h-full w-full"
+                aria-hidden
+              >
+                <path
+                  id="trailRoute"
+                  d="M30 40 Q120 120 210 40"
+                  stroke="var(--accent-primary)"
+                  strokeOpacity="0.55"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray="6 7"
+                  className="animate-trail-dash"
+                />
+                <circle r="5.5" fill="var(--accent-primary)" style={{ filter: "drop-shadow(0 0 5px var(--accent-primary))" }}>
+                  <animateMotion dur="4s" repeatCount="indefinite" calcMode="linear">
+                    <mpath href="#trailRoute" />
+                  </animateMotion>
+                </circle>
+              </svg>
+
+              {/* numbered stops: high → low → high */}
+              {[
+                { left: "12.5%", top: "31%", label: "1" },
+                { left: "50%", top: "62%", label: "2" },
+                { left: "87.5%", top: "31%", label: "3", end: true },
+              ].map((p, i) => (
+                <div
+                  key={i}
+                  className="absolute flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[var(--accent-primary)]/50 bg-[var(--surface)] text-lg font-black text-[var(--accent-primary)] shadow-md animate-float"
+                  style={{ left: p.left, top: p.top, animationDelay: `${i * 0.35}s` }}
+                >
+                  {p.label}
+                  {p.end && <span className="absolute -right-2.5 -top-4 text-xl">🚩</span>}
+                </div>
+              ))}
+            </div>
+
+            <h2 className="text-xl font-black text-[var(--foreground)]">Build your Heritage Trail</h2>
+            <p className="mt-2 max-w-[18rem] text-sm leading-relaxed text-[var(--text-muted)]">
+              Catch at least 3 heritage stalls and we&apos;ll connect them into your own cultural food trail.
             </p>
-            <Link
-              href="/radar"
-              className="inline-block px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold text-sm shadow-[0_4px_0_var(--border)] active:translate-y-[4px] active:shadow-none transition-all"
-            >
-              Open Radar
-            </Link>
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]/70">
+              0 of 3 stalls caught
+            </p>
+
+            <div className="relative mt-7 inline-flex">
+              {/* breathing glow halo */}
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-full bg-[var(--accent-primary)] blur-lg animate-glow-pulse"
+              />
+              <Link
+                href="/radar"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-8 py-3.5 text-sm font-bold text-white shadow-[0_4px_0_var(--border),0_8px_24px_rgba(196,85,58,0.35)] transition-all hover:translate-y-[1px] hover:shadow-[0_3px_0_var(--border),0_5px_16px_rgba(196,85,58,0.45)] active:translate-y-[4px] active:shadow-none"
+                style={{ background: "linear-gradient(135deg, var(--accent-primary), #e07a52)" }}
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 animate-badge-shine"
+                  style={{
+                    background:
+                      "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%)",
+                    backgroundSize: "200% 100%",
+                    animationDuration: "3s",
+                  }}
+                />
+                <span className="relative text-lg transition-transform duration-300 group-hover:rotate-[20deg]">
+                  🧭
+                </span>
+                <span className="font-display relative text-base font-bold tracking-wide">Open Radar</span>
+                <span className="relative text-base transition-transform duration-300 group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
+            </div>
           </div>
         )}
 

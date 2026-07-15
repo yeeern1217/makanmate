@@ -109,7 +109,6 @@ export default function DishCanvas({
             position={[0, 0, 0]}
             isActive={false}
             isExplored={true}
-            onClick={() => {}}
           />
         </Float>
 
@@ -125,7 +124,7 @@ export default function DishCanvas({
                 position={ingredientPositions[i]}
                 isActive={activeNodeId === ing.id}
                 isExplored={exploredNodeIds.includes(ing.id)}
-                onClick={() => onNodeTap(ing.id, "ingredient")}
+                onSelect={onNodeTap}
               />
             </Float>
           ))}
@@ -144,7 +143,7 @@ export default function DishCanvas({
                   position={techniquePositions[i]}
                   isActive={activeNodeId === tech.id}
                   isExplored={exploredNodeIds.includes(tech.id)}
-                  onClick={() => onNodeTap(tech.id, "technique")}
+                  onSelect={onNodeTap}
                 />
               </Float>
             ))}
@@ -162,7 +161,7 @@ export default function DishCanvas({
               position={[3.8, 0, 0]}
               isActive={activeNodeId === `${dish.id}-migration`}
               isExplored={exploredNodeIds.includes(`${dish.id}-migration`)}
-              onClick={() => onNodeTap(`${dish.id}-migration`, "migration")}
+              onSelect={onNodeTap}
             />
           </Float>
         </OrbitalRing>
@@ -180,7 +179,7 @@ export default function DishCanvas({
                   position={dialectPositions[i]}
                   isActive={activeNodeId === `${dish.id}-dialect-${i}`}
                   isExplored={exploredNodeIds.includes(`${dish.id}-dialect-${i}`)}
-                  onClick={() => onNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
+                  onSelect={onNodeTap}
                 />
               </Float>
             ))}
