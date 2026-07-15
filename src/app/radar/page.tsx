@@ -52,12 +52,21 @@ export default function RadarPage() {
   };
 
   return (
-    <div>
+    <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)] border-b-2 border-[var(--border)] z-20 relative">
-        <h1 className="text-sm font-bold text-[var(--accent-primary)]">Heritage Radar</h1>
-        <span className="text-xs text-[var(--text-muted)]">
-          {discoveredNodes.length}/{HERITAGE_NODES.filter((n) => n.isGrassroots).length} discovered
+      <div className="flex items-start justify-between px-4 pt-4 pb-3 bg-[var(--surface)] border-b-2 border-[var(--border)] z-20 relative">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]/70">
+            Live Map
+          </p>
+          <h1 className="text-2xl font-black leading-tight text-[var(--foreground)]">Heritage Radar</h1>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+            Hunt down legendary street-food stalls near you.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-dark)] px-3 py-1 text-xs font-bold text-[var(--text-muted)]">
+          <span className="text-[var(--accent-primary)]">{discoveredNodes.length}</span>
+          /{HERITAGE_NODES.filter((n) => n.isGrassroots).length} discovered
         </span>
       </div>
 
@@ -68,7 +77,7 @@ export default function RadarPage() {
       )}
 
       {/* Map + Proximity Guide */}
-      <div className="relative" style={{ width: "100%", height: "calc(100dvh - 48px - 72px)" }}>
+      <div className="relative flex-1 min-h-0">
         <ProximityGuide nodes={HERITAGE_NODES} userPosition={gpsPosition} />
         <RadarMap
           nodes={HERITAGE_NODES}

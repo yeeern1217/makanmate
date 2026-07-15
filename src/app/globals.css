@@ -74,8 +74,9 @@ h1, h2, h3, h4 {
 }
 
 @keyframes scan-line {
-  0% { top: 0; }
-  100% { top: 100%; }
+  0% { top: 10%; opacity: 0.2; }
+  50% { opacity: 0.9; }
+  100% { top: 82%; opacity: 0.2; }
 }
 
 @keyframes fade-in {
@@ -104,6 +105,7 @@ h1, h2, h3, h4 {
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-glow-pulse { animation: glow-pulse 2.2s ease-in-out infinite; }
 .animate-trail-dash { animation: trail-dash 1.2s linear infinite; }
+.animate-scan-line { animation: scan-line 2.6s ease-in-out infinite alternate; }
 
 .retro-heading {
   color: var(--accent-primary);

@@ -174,7 +174,7 @@ export default function PokedexPage() {
         <Link href="/pokedex" className="text-[var(--text-muted)] hover:text-[var(--foreground)] text-sm">
           &larr; Collection
         </Link>
-        <h1 className="text-sm font-bold text-[var(--accent-primary)]">Heritage Blueprint</h1>
+        <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Blueprint</h1>
         <div className="text-right">
           <p className="text-[10px] text-[var(--text-muted)]">Heritage Unlocked</p>
           <p className="text-sm font-bold text-[var(--accent-secondary)]">{heritageUnlocked}</p>

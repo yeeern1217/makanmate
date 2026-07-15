@@ -124,8 +124,14 @@ export default function ScanPage() {
   return (
     <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-center px-4 py-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
-        <h1 className="text-sm font-bold text-[var(--accent-primary)]">Catch</h1>
+      <div className="px-4 pt-4 pb-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]/70">
+          Magic Lens
+        </p>
+        <h1 className="text-2xl font-black text-[var(--foreground)] leading-tight">Catch a Stall</h1>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          Point at a hawker menu, then tap Catch to scan.
+        </p>
       </div>
 
       {toast && <ToastNotification message={toast} onDismiss={() => setToast(null)} />}
@@ -157,17 +163,35 @@ export default function ScanPage() {
           {cameraReady && (
             <div className="absolute inset-0 pointer-events-none">
               {/* Corner brackets */}
-              <div className="absolute top-6 left-6 w-12 h-12 border-t-3 border-l-3 border-[var(--accent-secondary)]" />
-              <div className="absolute top-6 right-6 w-12 h-12 border-t-3 border-r-3 border-[var(--accent-secondary)]" />
-              <div className="absolute bottom-24 left-6 w-12 h-12 border-b-3 border-l-3 border-[var(--accent-secondary)]" />
-              <div className="absolute bottom-24 right-6 w-12 h-12 border-b-3 border-r-3 border-[var(--accent-secondary)]" />
+              <div className="absolute top-6 left-6 h-12 w-12 rounded-tl-2xl border-l-4 border-t-4 border-[var(--accent-secondary)]" />
+              <div className="absolute top-6 right-6 h-12 w-12 rounded-tr-2xl border-r-4 border-t-4 border-[var(--accent-secondary)]" />
+              <div className="absolute bottom-24 left-6 h-12 w-12 rounded-bl-2xl border-b-4 border-l-4 border-[var(--accent-secondary)]" />
+              <div className="absolute bottom-24 right-6 h-12 w-12 rounded-br-2xl border-b-4 border-r-4 border-[var(--accent-secondary)]" />
+
+              {/* Sweeping scan line */}
+              {!scanning && (
+                <div className="absolute left-8 right-8 h-0.5 rounded-full bg-[var(--accent-secondary)] shadow-[0_0_10px_2px_var(--accent-secondary)] animate-scan-line" />
+              )}
+
+              {/* Framing hint */}
+              {!scanning && (
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/45 px-4 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm">
+                  📋 Frame the menu board
+                </div>
+              )}
             </div>
           )}
 
           {/* Capture button overlay */}
           {cameraReady && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-              <CaptureButton onClick={handleCapture} disabled={scanning} />
+              <div className="relative">
+                <span
+                  aria-hidden
+                  className="absolute inset-0 rounded-full bg-[var(--accent-primary)] blur-md animate-glow-pulse"
+                />
+                <CaptureButton onClick={handleCapture} disabled={scanning} />
+              </div>
             </div>
           )}
 
@@ -178,18 +202,19 @@ export default function ScanPage() {
           )}
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center space-y-4">
-            <p className="text-4xl">📷</p>
-            <p className="text-[var(--text-muted)] text-sm">
-              Camera not available. Use the dropdown below to explore dishes.
-            </p>
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center animate-fade-in">
+          <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-dashed border-[var(--accent-primary)]/40 bg-[var(--surface)]/60 animate-pulse-warm">
+            <span className="text-4xl animate-float">📷</span>
           </div>
+          <h2 className="text-lg font-bold text-[var(--foreground)]">Camera unavailable</h2>
+          <p className="mt-1.5 max-w-[16rem] text-sm leading-relaxed text-[var(--text-muted)]">
+            No worries — pick a dish below to explore its heritage instead.
+          </p>
         </div>
       )}
 
       {/* Results area */}
-      <div className="bg-[var(--background)] border-t-2 border-[var(--border)] px-4 py-4 space-y-4 max-h-[40vh] overflow-y-auto">
+      <div className="bg-[var(--background)] border-t-2 border-[var(--border)] px-4 py-5 space-y-5 max-h-[48vh] overflow-y-auto">
         {dishes.length > 0 && <MenuAnalysisResult dishes={dishes} />}
         <ManualDishDropdown />
       </div>
