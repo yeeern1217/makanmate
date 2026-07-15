@@ -30,14 +30,20 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
+              aria-current={active ? "page" : undefined}
+              className={`relative flex flex-1 flex-col items-center gap-0.5 rounded-xl px-3 py-1 transition-all ${
                 active
-                  ? "text-[var(--accent-primary)] font-bold"
-                  : "text-[var(--text-muted)]"
+                  ? "text-[var(--accent-primary)] font-bold bg-[var(--accent-primary)]/10"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               }`}
             >
-              <span className="text-xl">{tab.emoji}</span>
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              {active && (
+                <span className="absolute -top-[13px] left-0 h-2 w-full rounded-full bg-[var(--accent-primary)]" />
+              )}
+              <span className={`text-xl transition-transform ${active ? "scale-110" : ""}`}>
+                {tab.emoji}
+              </span>
+              <span className="text-sm font-medium">{tab.label}</span>
             </Link>
           );
         })}

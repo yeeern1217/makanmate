@@ -100,13 +100,13 @@ export default function BlueprintNode({
           <div
             style={{
               color: isActive ? color : "var(--foreground)",
-              fontSize: "11px",
+              fontSize: "14px",
               fontWeight: isActive ? 700 : 500,
               textAlign: "center",
               whiteSpace: "nowrap",
               background: isActive ? `${color}22` : "rgba(250,243,224,0.85)",
-              padding: "2px 8px",
-              borderRadius: "6px",
+              padding: "4px 12px",
+              borderRadius: "9999px",
               border: `1px solid ${isActive ? color : "var(--border)"}`,
               transition: "all 0.3s",
             }}

@@ -37,7 +37,7 @@ export default function IngredientLoreOverlay({
         <div className="space-y-3">
           <p className="text-sm text-gray-300 leading-relaxed">{lore.lore_text}</p>
           <div className="bg-[#252540] rounded-lg px-4 py-3">
-            <p className="text-xs text-[#ffd700] font-bold mb-1">Fun Fact</p>
+            <p className="text-sm text-[#ffd700] font-bold mb-1">Fun Fact</p>
             <p className="text-sm text-gray-300">{lore.fun_fact}</p>
           </div>
           <p className="text-xs text-gray-500">Origin: {lore.origin_region}</p>

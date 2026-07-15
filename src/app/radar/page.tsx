@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { getCurrentPosition } from "@/lib/gps";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
+import { POKEDEX_ENTRIES } from "@/lib/data/pokedex-entries";
 import { HeritageNode } from "@/types/heritage";
 import { computeAkarScore } from "@/lib/scoring/akar-score";
 import BottomSheet from "@/components/ui/BottomSheet";
@@ -83,10 +84,10 @@ export default function RadarPage() {
           <div className="space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-[var(--foreground)]">{selectedNode.name}</h2>
-                <p className="text-sm text-[var(--text-muted)]">
-                  {selectedNode.city} · {selectedNode.type}
-                  <span className="ml-2 inline-block rounded-full bg-[var(--surface-dark)] px-2 py-0.5 text-xs">
+                <h2 className="text-xl font-bold text-[var(--foreground)]">{selectedNode.name}</h2>
+                <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-[var(--text-muted)]">
+                  <span>{selectedNode.city} · {selectedNode.type}</span>
+                  <span className="inline-block rounded-full border border-[var(--border)] bg-[var(--surface-dark)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-muted)]">
                     {selectedNode.culturalOrigin}
                   </span>
                 </p>
@@ -101,29 +102,50 @@ export default function RadarPage() {
 
             <p className="text-sm text-[var(--foreground)]">{selectedNode.description}</p>
 
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-[var(--text-muted)]">
-                Signature:{" "}
-                <span className="text-[var(--foreground)] font-medium">
+            <div className="relative flex items-center gap-3.5 overflow-hidden rounded-2xl border border-[var(--accent-secondary)]/40 bg-[var(--surface-dark)] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+              {/* shimmer sweep — light catching a collectible seal */}
+              <div
+                className="pointer-events-none absolute inset-0 animate-badge-shine"
+                style={{
+                  background:
+                    "linear-gradient(105deg, transparent 40%, rgba(212,169,71,0.28) 50%, transparent 60%)",
+                  backgroundSize: "200% 100%",
+                  animationDuration: "6s",
+                }}
+              />
+              {/* oversized watermark bleeding off the right — collectible-card motif */}
+              <div className="pointer-events-none absolute -right-3 top-1/2 -translate-y-1/2 rotate-12 select-none text-[7rem] leading-none opacity-[0.07]">
+                {POKEDEX_ENTRIES.find((d) => d.id === selectedNode.dish_id)?.emoji ?? "🍽️"}
+              </div>
+              {/* emoji medallion — a stamped seal of authenticity */}
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent-secondary)]/30 to-[var(--accent-primary)]/20 text-3xl ring-2 ring-[var(--accent-secondary)]/60 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.15),0_2px_6px_rgba(196,85,58,0.25)]">
+                {POKEDEX_ENTRIES.find((d) => d.id === selectedNode.dish_id)?.emoji ?? "🍽️"}
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <p className="text-base font-bold uppercase tracking-[0.12em] text-[var(--accent-primary)]">
+                  Signature Dish ⭐
+                </p>
+                <p className="truncate text-base font-bold leading-tight text-[var(--foreground)]">
                   {selectedNode.signature_dish}
-                </span>
-              </span>
-              {gpsPosition && (
-                <span className="text-[var(--text-muted)]">
-                  {formatDistance(distanceToNode(selectedNode)!)}
-                </span>
-              )}
+                </p>
+                {gpsPosition && (
+                  <p className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">
+                    📍 {formatDistance(distanceToNode(selectedNode)!)} away
+                  </p>
+                )}
+              </div>
             </div>
 
             {selectedNode.founded && (
-              <p className="text-xs text-[var(--text-muted)]">Founded {selectedNode.founded}</p>
+              <p className="text-sm text-[var(--text-muted)]">Founded {selectedNode.founded}</p>
             )}
 
-            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
               <span>{selectedNode.communityCatchCount} explorers caught this stall</span>
             </div>
 
             <GlowButton
+              size="sm"
               onClick={() => {
                 setActiveNodeId(selectedNode.id);
                 router.push("/scan");

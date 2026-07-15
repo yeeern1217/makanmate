@@ -6,7 +6,7 @@ export default function DishMetaCard({ dish }: { dish: DishEntry }) {
     <div className="bg-[#1a1a2e] rounded-xl px-5 py-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold">{dish.name}</h1>
+          <h1 className="text-xl font-bold text-white">{dish.name}</h1>
           <p className="text-lg text-gray-400">{dish.local_script}</p>
           <p className="text-sm text-gray-500 mt-1">{dish.origin_state}</p>
         </div>

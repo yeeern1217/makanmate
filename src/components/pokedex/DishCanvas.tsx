@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Float, Stars, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -57,9 +57,21 @@ export default function DishCanvas({
   activeNodeId: string | null;
   exploredNodeIds: string[];
 }) {
-  const ingredientPositions = distributeOnRing(dish.ingredients.length, 2.0);
-  const techniquePositions = distributeOnRing(dish.techniques?.length ?? 0, 3.2, 0.4);
-  const dialectPositions = distributeOnRing(dish.dialectPhrases?.length ?? 0, 4.4, 0.5);
+  // Memoize so ring positions are computed once per dish — otherwise the
+  // Math.random() inside distributeOnRing re-runs on every re-render (e.g. each
+  // node tap), making all nodes teleport to new positions.
+  const ingredientPositions = useMemo(
+    () => distributeOnRing(dish.ingredients.length, 2.0),
+    [dish.ingredients.length]
+  );
+  const techniquePositions = useMemo(
+    () => distributeOnRing(dish.techniques?.length ?? 0, 3.2, 0.4),
+    [dish.techniques?.length]
+  );
+  const dialectPositions = useMemo(
+    () => distributeOnRing(dish.dialectPhrases?.length ?? 0, 4.4, 0.5),
+    [dish.dialectPhrases?.length]
+  );
 
   return (
     <div style={{ width: "100%", height: "60vh" }}>
