@@ -51,11 +51,13 @@ export default function DishCanvas({
   onNodeTap,
   activeNodeId,
   exploredNodeIds,
+  paused = false,
 }: {
   dish: DishEntry;
   onNodeTap: (id: string, category: NodeCategory) => void;
   activeNodeId: string | null;
   exploredNodeIds: string[];
+  paused?: boolean;
 }) {
   // Memoize so ring positions are computed once per dish — otherwise the
   // Math.random() inside distributeOnRing re-runs on every re-render (e.g. each
@@ -74,8 +76,9 @@ export default function DishCanvas({
   );
 
   return (
-    <div style={{ width: "100%", height: "60vh" }}>
+    <div style={{ width: "100%", height: "60vh", visibility: paused ? "hidden" : "visible" }}>
       <Canvas
+        frameloop={paused ? "never" : "always"}
         camera={{ position: [0, 2, 7], fov: 50 }}
         gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
         dpr={[1, 2]}

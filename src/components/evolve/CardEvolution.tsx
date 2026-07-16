@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import type { CardTier } from "@/types/card";
+import type { CardTier, RarityClass, CulturalOrigin } from "@/types/card";
 import { speak } from "@/lib/voice/voice-guide";
+import StallCard from "@/components/catch/StallCard";
 
 const TIER_CONFIG: Record<CardTier, { label: string; color: string; glow: string; emoji: string }> = {
   bronze: { label: "Bronze", color: "var(--tier-bronze)", glow: "#cd7f3266", emoji: "🥉" },
@@ -9,15 +10,35 @@ const TIER_CONFIG: Record<CardTier, { label: string; color: string; glow: string
   gold: { label: "Gold", color: "var(--tier-gold)", glow: "#d4a94766", emoji: "🥇" },
 };
 
+function particleSpec(i: number) {
+  const r = (seed: number) => {
+    const v = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  return { distance: 60 + r(1) * 40, duration: 0.5 + r(2) * 0.5 };
+}
+
 export default function CardEvolution({
   fromTier,
   toTier,
   dishName,
+  dishId,
+  stallName,
+  culturalOrigin,
+  rarity,
+  akarScore,
+  capturedPhoto,
   onComplete,
 }: {
   fromTier: CardTier;
   toTier: CardTier;
   dishName: string;
+  dishId: string;
+  stallName: string;
+  culturalOrigin: CulturalOrigin;
+  rarity: RarityClass;
+  akarScore: number;
+  capturedPhoto?: string;
   onComplete: () => void;
 }) {
   const [phase, setPhase] = useState<"shimmer" | "burst" | "reveal">("shimmer");
@@ -36,6 +57,7 @@ export default function CardEvolution({
 
   const to = TIER_CONFIG[toTier];
   const from = TIER_CONFIG[fromTier];
+  const displayTier = phase === "reveal" ? toTier : fromTier;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
@@ -55,10 +77,8 @@ export default function CardEvolution({
 
           {/* Card */}
           <div
-            className="relative w-48 h-64 rounded-2xl border-4 flex flex-col items-center justify-center gap-3"
             style={{
-              borderColor: phase === "reveal" ? to.color : from.color,
-              background: `linear-gradient(135deg, var(--surface) 0%, ${phase === "reveal" ? to.glow : from.glow} 100%)`,
+              width: 260,
               transform: phase === "shimmer"
                 ? "scale(1) rotateY(0deg)"
                 : phase === "burst"
@@ -67,32 +87,37 @@ export default function CardEvolution({
               transition: "all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
           >
-            <span className="text-5xl">{to.emoji}</span>
-            <div>
-              <p className="text-xs text-[var(--text-muted)]">{dishName}</p>
-              <p className="text-lg font-bold" style={{ color: to.color }}>
-                {to.label}
-              </p>
-            </div>
+            <StallCard
+              dishId={dishId}
+              stallName={stallName}
+              culturalOrigin={culturalOrigin}
+              rarity={rarity}
+              tier={displayTier}
+              akarScore={akarScore}
+              capturedPhoto={capturedPhoto}
+            />
           </div>
 
           {/* Particles */}
           {(phase === "burst" || phase === "reveal") && (
             <div className="absolute inset-0 pointer-events-none overflow-visible">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full"
-                  style={{
-                    background: to.color,
-                    left: "50%",
-                    top: "50%",
-                    transform: `translate(-50%, -50%) rotate(${i * 30}deg) translateY(-${60 + Math.random() * 40}px)`,
-                    opacity: phase === "reveal" ? 0 : 1,
-                    transition: `all ${0.5 + Math.random() * 0.5}s ease-out`,
-                  }}
-                />
-              ))}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const spec = particleSpec(i);
+                return (
+                  <div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                      background: to.color,
+                      left: "50%",
+                      top: "50%",
+                      transform: `translate(-50%, -50%) rotate(${i * 30}deg) translateY(-${spec.distance}px)`,
+                      opacity: phase === "reveal" ? 0 : 1,
+                      transition: `all ${spec.duration}s ease-out`,
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
