@@ -8,6 +8,7 @@ import {
 import {
   SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE, SYSTEM_PROMPT_LIVENESS,
   SYSTEM_PROMPT_MAGIC_LENS, SYSTEM_PROMPT_MIGRATION, SYSTEM_PROMPT_TRAIL_NARRATIVE,
+  SYSTEM_PROMPT_LIVENESS_TEST,
 } from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 
@@ -19,20 +20,51 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractToolInput(result: any, toolName: string) {
+type ToolCallLike = {
+  toolName: string;
+  input: unknown;
+};
+
+type StepLike = {
+  toolCalls?: ToolCallLike[];
+};
+
+function extractToolInput(result: { steps: StepLike[] }, toolName: string) {
   const call = result.steps
-    .flatMap((s: any) => s.toolCalls)
-    .find((tc: any) => tc.toolName === toolName);
+    .flatMap((step) => step.toolCalls ?? [])
+    .find((toolCall) => toolCall.toolName === toolName);
   return call ? call.input : null;
 }
 
 export async function POST(req: NextRequest) {
   const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = await req.json();
 
+  if (mode === "liveness-test") {
+    const result = await generateText({
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      system: SYSTEM_PROMPT_LIVENESS_TEST,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image" as const, image: `data:image/jpeg;base64,${image}` },
+          { type: "text" as const, text: "Is this a picture of a person?" },
+        ],
+      }],
+      tools: {
+        livenessCheck: tool({ description: "Report person-liveness detection result", inputSchema: livenessCheckSchema }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({
+      toolName: "livenessCheck",
+      result: extractToolInput(result, "livenessCheck") ?? { isReal: true, confidence: 0.5, reason: "Unable to determine" },
+    });
+  }
+
   if (mode === "liveness") {
     const result = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_LIVENESS,
       messages: [{
         role: "user",
@@ -55,7 +87,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "lore") {
     const result = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_INGREDIENT_LORE,
       messages: [{ role: "user", content: `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}` }],
       tools: {
@@ -69,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "magic-lens") {
     const result = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_MAGIC_LENS,
       messages: [{
         role: "user",
@@ -89,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "migration") {
     const result = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_MIGRATION,
       messages: [{ role: "user", content: `Tell the migration story: ${migrationHint}` }],
       tools: {
@@ -103,7 +135,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "trail-narrative") {
     const result = await generateText({
-      model: google("gemini-2.5-flash"),
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_TRAIL_NARRATIVE,
       messages: [{ role: "user", content: `Generate a heritage trail narrative for these stalls: ${stalls}` }],
       tools: {
@@ -138,7 +170,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await generateText({
-    model: google("gemini-2.5-flash"),
+    model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
     system: SYSTEM_PROMPT_MENU_VISION,
     messages: [{
       role: "user",

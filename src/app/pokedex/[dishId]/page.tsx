@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { POKEDEX_ENTRIES } from "@/lib/data/pokedex-entries";
+import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { usePokedexStore } from "@/store/usePokedexStore";
 import { useCardStore } from "@/store/useCardStore";
 import { IngredientLore } from "@/types/ai";
@@ -240,6 +241,7 @@ export default function PokedexPage() {
           onNodeTap={handleNodeTap}
           activeNodeId={activeNodeId}
           exploredNodeIds={exploredNodeIds}
+          paused={showQuiz || showEvolution}
         />
 
         {/* Node detail overlays */}
@@ -312,11 +314,17 @@ export default function PokedexPage() {
       )}
 
       {/* Evolution animation */}
-      {showEvolution && dish && (
+      {showEvolution && dish && card && (
         <CardEvolution
           fromTier={evolutionFrom}
           toTier={evolutionTo}
           dishName={dish.name}
+          dishId={dish.id}
+          stallName={HERITAGE_NODES.find((n) => n.id === card.stallId)?.name ?? dish.name}
+          culturalOrigin={card.culturalOrigin}
+          rarity={card.rarity}
+          akarScore={card.akarScore}
+          capturedPhoto={card.capturedPhoto}
           onComplete={() => setShowEvolution(false)}
         />
       )}

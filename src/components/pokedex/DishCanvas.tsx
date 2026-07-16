@@ -51,19 +51,22 @@ export default function DishCanvas({
   onNodeTap,
   activeNodeId,
   exploredNodeIds,
+  paused = false,
 }: {
   dish: DishEntry;
   onNodeTap: (id: string, category: NodeCategory) => void;
   activeNodeId: string | null;
   exploredNodeIds: string[];
+  paused?: boolean;
 }) {
   const ingredientPositions = distributeOnRing(dish.ingredients.length, 2.0);
   const techniquePositions = distributeOnRing(dish.techniques?.length ?? 0, 3.2, 0.4);
   const dialectPositions = distributeOnRing(dish.dialectPhrases?.length ?? 0, 4.4, 0.5);
 
   return (
-    <div style={{ width: "100%", height: "60vh" }}>
+    <div style={{ width: "100%", height: "60vh", visibility: paused ? "hidden" : "visible" }}>
       <Canvas
+        frameloop={paused ? "never" : "always"}
         camera={{ position: [0, 2, 7], fov: 50 }}
         gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
         dpr={[1, 2]}
