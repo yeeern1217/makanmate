@@ -31,6 +31,8 @@ export default function PokedexPage() {
 
   const getLore = usePokedexStore((s) => s.getLore);
   const cacheLore = usePokedexStore((s) => s.cacheLore);
+  const cookDish = usePokedexStore((s) => s.cookDish);
+  const cookedDishes = usePokedexStore((s) => s.cookedDishes);
 
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const exploredNodes = useCardStore((s) => s.exploredNodes);
@@ -49,11 +51,25 @@ export default function PokedexPage() {
   const [loadingMigration, setLoadingMigration] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showEvolution, setShowEvolution] = useState(false);
-  const [pillsOpen, setPillsOpen] = useState(false);
   const [evolutionFrom, setEvolutionFrom] = useState<CardTier>("bronze");
   const [evolutionTo, setEvolutionTo] = useState<CardTier>("silver");
+  const [showMastered, setShowMastered] = useState(false);
+  const [storyUnlocked, setStoryUnlocked] = useState(false);
+  const storyRef = useRef<HTMLDivElement>(null);
 
   const exploredNodeIds = mounted && dish ? (exploredNodes[dish.id] ?? []) : [];
+  const alreadyCooked = mounted && dish ? cookedDishes.includes(dish.id) : false;
+
+  const handleCookComplete = useCallback(() => {
+    if (!dish) return;
+    cookDish(dish.id);
+    setShowMastered(true);
+    setStoryUnlocked(true);
+    setTimeout(() => {
+      storyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 600);
+    setTimeout(() => setShowMastered(false), 2800);
+  }, [dish, cookDish]);
 
   const activeNodeIdRef = useRef<string | null>(null);
   const lastTapTime = useRef(0);
@@ -178,7 +194,7 @@ export default function PokedexPage() {
   const exploredCount = exploredNodeIds.length;
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col">
       {/* Compact top bar */}
       <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[var(--surface)]/85 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
         <Link href="/pokedex" className="text-[var(--text-muted)] hover:text-[var(--foreground)] text-lg shrink-0">
@@ -203,133 +219,168 @@ export default function PokedexPage() {
         )}
       </div>
 
-      {/* 3D Blueprint Canvas */}
-      <div className="relative flex-1">
-        <DishCanvas
-          dish={dish}
-          onNodeTap={handleNodeTap}
-          activeNodeId={activeNodeId}
-          exploredNodeIds={exploredNodeIds}
-          paused={showQuiz || showEvolution}
-        />
-
-        {/* Node detail overlays */}
-        {activeNodeId && activeCategory === "ingredient" && activeIngredient && (
-          <NodeDetailOverlay
-            node={{ kind: "ingredient", data: activeIngredient, lore, loading: loadingLore }}
-            onClose={() => {
-              setActiveNodeId(null);
-              setActiveCategory(null);
-              setLore(null);
-            }}
-          />
-        )}
-
-        {activeNodeId && activeCategory === "technique" && activeTechnique && (
-          <NodeDetailOverlay
-            node={{ kind: "technique", data: activeTechnique }}
-            onClose={() => {
-              setActiveNodeId(null);
-              setActiveCategory(null);
-            }}
-          />
-        )}
-
-        {activeNodeId && activeCategory === "migration" && (
-          <NodeDetailOverlay
-            node={{
-              kind: "migration",
-              data: migrationStory,
-              hint: dish.migrationStoryHint ?? "",
-              loading: loadingMigration,
-            }}
-            onClose={() => {
-              setActiveNodeId(null);
-              setActiveCategory(null);
-              setMigrationStory(null);
-            }}
-          />
-        )}
-
-        {activeNodeId && activeCategory === "dialect" && activeDialect && (
-          <NodeDetailOverlay
-            node={{ kind: "dialect", data: activeDialect }}
-            onClose={() => {
-              setActiveNodeId(null);
-              setActiveCategory(null);
-            }}
-          />
-        )}
-
-        {/* Pill index toggle (failsafe interaction) */}
-        <button
-          onClick={() => setPillsOpen((v) => !v)}
-          className="absolute top-2 right-2 z-30 px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--surface)]/90 border border-[var(--border)] backdrop-blur-sm active:scale-95"
-        >
-          {pillsOpen ? "✕" : "≡ Index"}
-        </button>
-        {pillsOpen && (
-          <div className="absolute top-12 left-2 right-2 z-30 flex gap-1.5 overflow-x-auto whitespace-nowrap rounded-xl bg-[var(--surface)]/90 border border-[var(--border)] backdrop-blur-sm p-2">
-            {dish.ingredients.map((ing) => (
-              <button
-                key={ing.id}
-                onClick={() => handleNodeTap(ing.id, "ingredient")}
-                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-                  activeNodeId === ing.id
-                    ? "bg-[#4a7c59]/20 border-[#4a7c59] text-[#4a7c59] font-bold scale-105"
-                    : exploredNodeIds.includes(ing.id)
-                      ? "bg-[var(--surface)] border-[#4a7c59]/30 text-[var(--foreground)]"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-                }`}
-              >
-                {ing.emoji} {ing.name} {exploredNodeIds.includes(ing.id) && "✓"}
-              </button>
-            ))}
-            {dish.techniques?.map((tech) => (
-              <button
-                key={tech.id}
-                onClick={() => handleNodeTap(tech.id, "technique")}
-                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-                  activeNodeId === tech.id
-                    ? "bg-[#c4553a]/20 border-[#c4553a] text-[#c4553a] font-bold scale-105"
-                    : exploredNodeIds.includes(tech.id)
-                      ? "bg-[var(--surface)] border-[#c4553a]/30 text-[var(--foreground)]"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-                }`}
-              >
-                {tech.emoji} {tech.name} {exploredNodeIds.includes(tech.id) && "✓"}
-              </button>
-            ))}
+      {/* Scrollable content */}
+      <div className="flex flex-1 flex-col overflow-y-auto">
+        {/* Component slide bar — lazy path: slide + tap a component to read it */}
+        <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap border-b border-[var(--border)] bg-[var(--surface)]/70 px-3 py-2 backdrop-blur-sm">
+          {dish.ingredients.map((ing) => (
             <button
-              onClick={() => handleNodeTap(`${dish.id}-migration`, "migration")}
+              key={ing.id}
+              onClick={() => handleNodeTap(ing.id, "ingredient")}
               className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-                activeNodeId === `${dish.id}-migration`
-                  ? "bg-[#d4a947]/20 border-[#d4a947] text-[#d4a947] font-bold scale-105"
-                  : exploredNodeIds.includes(`${dish.id}-migration`)
-                    ? "bg-[var(--surface)] border-[#d4a947]/30 text-[var(--foreground)]"
+                activeNodeId === ing.id
+                  ? "bg-[#4a7c59]/20 border-[#4a7c59] text-[#4a7c59] font-bold scale-105"
+                  : exploredNodeIds.includes(ing.id)
+                    ? "bg-[var(--surface)] border-[#4a7c59]/30 text-[var(--foreground)]"
                     : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
               }`}
             >
-              🧭 Migration {exploredNodeIds.includes(`${dish.id}-migration`) && "✓"}
+              {ing.emoji} {ing.name} {exploredNodeIds.includes(ing.id) && "✓"}
             </button>
-            {dish.dialectPhrases?.map((dp, i) => (
-              <button
-                key={`dialect-${i}`}
-                onClick={() => handleNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
-                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-                  activeNodeId === `${dish.id}-dialect-${i}`
-                    ? "bg-[#6b5ce7]/20 border-[#6b5ce7] text-[#6b5ce7] font-bold scale-105"
-                    : exploredNodeIds.includes(`${dish.id}-dialect-${i}`)
-                      ? "bg-[var(--surface)] border-[#6b5ce7]/30 text-[var(--foreground)]"
-                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-                }`}
-              >
-                💬 {dp.phrase} {exploredNodeIds.includes(`${dish.id}-dialect-${i}`) && "✓"}
-              </button>
-            ))}
+          ))}
+          {dish.techniques?.map((tech) => (
+            <button
+              key={tech.id}
+              onClick={() => handleNodeTap(tech.id, "technique")}
+              className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                activeNodeId === tech.id
+                  ? "bg-[#c4553a]/20 border-[#c4553a] text-[#c4553a] font-bold scale-105"
+                  : exploredNodeIds.includes(tech.id)
+                    ? "bg-[var(--surface)] border-[#c4553a]/30 text-[var(--foreground)]"
+                    : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+              }`}
+            >
+              {tech.emoji} {tech.name} {exploredNodeIds.includes(tech.id) && "✓"}
+            </button>
+          ))}
+        </div>
+
+        {/* 3D cooking game — tap ingredients in order, then watch them assemble */}
+        <div className="relative h-[56vh] shrink-0">
+          {/* Render only after mount so `initiallyCompleted` reads the persisted
+              cooked state instead of the pre-hydration `false`. */}
+          {mounted ? (
+            <DishCanvas
+              dish={dish}
+              onCookComplete={handleCookComplete}
+              initiallyCompleted={alreadyCooked}
+              paused={showQuiz || showEvolution}
+            />
+          ) : (
+            <LoadingPulse text="Loading blueprint..." />
+          )}
+          {showMastered && (
+            <div className="absolute inset-x-0 top-3 z-30 flex justify-center pointer-events-none">
+              <div className="rounded-full bg-[var(--tier-gold)] px-4 py-2 text-sm font-black text-white shadow-[0_4px_0_var(--border)] animate-slide-up">
+                🎉 {dish.name} Mastered!
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Heritage Story — migration + dialect, pulled out of the orbit */}
+        <div
+          ref={storyRef}
+          className={`m-3 rounded-2xl border p-3 transition-all ${
+            storyUnlocked
+              ? "border-[var(--tier-gold)] bg-[var(--tier-gold)]/10 shadow-[0_0_24px_rgba(212,169,71,0.35)]"
+              : "border-[var(--border)] bg-[var(--surface)]/60"
+          }`}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-black uppercase tracking-wide text-[var(--text-muted)]">
+              Heritage &amp; Language
+            </h2>
+            {(storyUnlocked || alreadyCooked) && (
+              <span className="text-[10px] font-bold text-[var(--tier-gold)]">🔓 Unlocked</span>
+            )}
           </div>
-        )}
+
+          {/* Migration story card */}
+          <button
+            onClick={() => handleNodeTap(`${dish.id}-migration`, "migration")}
+            className="mb-2 flex w-full items-center gap-3 rounded-xl border border-[#d4a947]/40 bg-[var(--surface)] px-3 py-2.5 text-left transition-transform active:scale-[0.99]"
+          >
+            <span className="text-2xl">🧭</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-[var(--foreground)]">Migration Story</p>
+              <p className="truncate text-[11px] text-[var(--text-muted)]">
+                {dish.migrationStoryHint ?? "How this dish travelled here"}
+              </p>
+            </div>
+            <span className="text-[var(--text-muted)]">›</span>
+          </button>
+
+          {/* Dialect phrases */}
+          {dish.dialectPhrases && dish.dialectPhrases.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap">
+              {dish.dialectPhrases.map((dp, i) => (
+                <button
+                  key={`dialect-${i}`}
+                  onClick={() => handleNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
+                  className={`shrink-0 rounded-full border px-2.5 py-1.5 text-xs transition-all ${
+                    activeNodeId === `${dish.id}-dialect-${i}`
+                      ? "border-[#6b5ce7] bg-[#6b5ce7]/20 font-bold text-[#6b5ce7]"
+                      : exploredNodeIds.includes(`${dish.id}-dialect-${i}`)
+                        ? "border-[#6b5ce7]/30 bg-[var(--surface)] text-[var(--foreground)]"
+                        : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]"
+                  }`}
+                >
+                  💬 {dp.phrase} {exploredNodeIds.includes(`${dish.id}-dialect-${i}`) && "✓"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Node detail overlays (pinned to the bottom of the page) */}
+      {activeNodeId && activeCategory === "ingredient" && activeIngredient && (
+        <NodeDetailOverlay
+          node={{ kind: "ingredient", data: activeIngredient, lore, loading: loadingLore }}
+          onClose={() => {
+            setActiveNodeId(null);
+            setActiveCategory(null);
+            setLore(null);
+          }}
+        />
+      )}
+
+      {activeNodeId && activeCategory === "technique" && activeTechnique && (
+        <NodeDetailOverlay
+          node={{ kind: "technique", data: activeTechnique }}
+          onClose={() => {
+            setActiveNodeId(null);
+            setActiveCategory(null);
+          }}
+        />
+      )}
+
+      {activeNodeId && activeCategory === "migration" && (
+        <NodeDetailOverlay
+          node={{
+            kind: "migration",
+            data: migrationStory,
+            hint: dish.migrationStoryHint ?? "",
+            loading: loadingMigration,
+          }}
+          onClose={() => {
+            setActiveNodeId(null);
+            setActiveCategory(null);
+            setMigrationStory(null);
+          }}
+        />
+      )}
+
+      {activeNodeId && activeCategory === "dialect" && activeDialect && (
+        <NodeDetailOverlay
+          node={{ kind: "dialect", data: activeDialect }}
+          onClose={() => {
+            setActiveNodeId(null);
+            setActiveCategory(null);
+          }}
+        />
+      )}
 
       {/* Quiz overlay */}
       {showQuiz && dish && (
