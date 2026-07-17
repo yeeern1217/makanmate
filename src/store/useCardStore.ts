@@ -24,6 +24,12 @@ const NEXT_TIER: Record<CardTier, CardTier | null> = {
   gold: null,
 };
 
+function uniqueCards(cards: CapturedCard[]): CapturedCard[] {
+  const byDish = new Map<string, CapturedCard>();
+  for (const card of cards) byDish.set(card.dishId, card);
+  return [...byDish.values()];
+}
+
 export const useCardStore = create<CardState>()(
   persist(
     (set, get) => ({
@@ -32,7 +38,7 @@ export const useCardStore = create<CardState>()(
       exploredNodes: {},
 
       addCard: (card) =>
-        set((s) => ({ cards: [...s.cards, card] })),
+        set((s) => ({ cards: uniqueCards([...s.cards, card]) })),
 
       evolveCard: (cardId) =>
         set((s) => ({
@@ -88,6 +94,14 @@ export const useCardStore = create<CardState>()(
         trails: s.trails,
         exploredNodes: s.exploredNodes,
       }),
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<CardState>;
+        return {
+          ...current,
+          ...saved,
+          cards: uniqueCards(saved.cards ?? current.cards),
+        };
+      },
     }
   )
 );
