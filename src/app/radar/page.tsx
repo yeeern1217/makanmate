@@ -1,10 +1,10 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import { getCurrentPosition } from "@/lib/gps";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
+import { haversineDistance, HERITAGE_CATCH_RADIUS_M } from "@/lib/geo";
 import { POKEDEX_ENTRIES } from "@/lib/data/pokedex-entries";
 import { HeritageNode } from "@/types/heritage";
 import { computeAkarScore } from "@/lib/scoring/akar-score";
@@ -19,14 +19,6 @@ const RadarMap = dynamic(() => import("@/components/map/RadarMap"), {
   ssr: false,
   loading: () => <LoadingPulse text="Loading map..." />,
 });
-
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 export default function RadarPageWrapper() {
   return (
@@ -43,16 +35,33 @@ function RadarPage() {
   const gpsPosition = useAppStore((s) => s.gpsPosition);
   const setGpsPosition = useAppStore((s) => s.setGpsPosition);
   const simulatedPosition = useAppStore((s) => s.simulatedPosition);
-  const setSimulatedPosition = useAppStore((s) => s.setSimulatedPosition);
   const discoveredNodes = useAppStore((s) => s.discoveredNodes);
   const setActiveNodeId = useAppStore((s) => s.setActiveNodeId);
   const [selectedNode, setSelectedNode] = useState<HeritageNode | null>(null);
   const [gpsError, setGpsError] = useState(false);
+  const [locating, setLocating] = useState(true);
 
   useEffect(() => {
-    getCurrentPosition()
-      .then(setGpsPosition)
-      .catch(() => setGpsError(true));
+    if (!("geolocation" in navigator)) {
+      const timer = window.setTimeout(() => {
+        setGpsError(true);
+        setLocating(false);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGpsPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        setGpsError(false);
+        setLocating(false);
+      },
+      () => {
+        setGpsError(true);
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
   }, [setGpsPosition]);
 
   const displayPosition = simulatedPosition ?? gpsPosition;
@@ -61,6 +70,14 @@ function RadarPage() {
     if (!displayPosition) return null;
     return Math.round(haversineDistance(displayPosition.lat, displayPosition.lng, node.lat, node.lng));
   };
+
+  const nearestGrassroots = useMemo(() => {
+    if (!displayPosition) return null;
+    return HERITAGE_NODES.filter((node) => node.isGrassroots).reduce<{ node: HeritageNode; distance: number } | null>((closest, node) => {
+      const distance = Math.round(haversineDistance(displayPosition.lat, displayPosition.lng, node.lat, node.lng));
+      return !closest || distance < closest.distance ? { node, distance } : closest;
+    }, null);
+  }, [displayPosition]);
 
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${meters}m away`;
@@ -92,7 +109,13 @@ function RadarPage() {
 
       {process.env.NODE_ENV !== "production" && <LocationSimulator />}
 
-      {gpsError && (
+      {locating && !simulatedPosition && (
+        <div className="bg-blue-50 text-blue-800 text-xs text-center py-2 border-b border-blue-200">
+          Finding your location…
+        </div>
+      )}
+
+      {gpsError && !simulatedPosition && (
         <div className="bg-amber-50 text-amber-700 text-xs text-center py-2 border-b border-amber-200">
           GPS unavailable — showing all nodes without distance
         </div>
@@ -105,6 +128,7 @@ function RadarPage() {
           nodes={HERITAGE_NODES}
           discoveredNodes={discoveredNodes}
           userPosition={displayPosition}
+          targetNodeId={nearestGrassroots?.node.id}
           onNodeClick={setSelectedNode}
           initialCenter={
             highlightId
@@ -116,6 +140,10 @@ function RadarPage() {
           }
           initialZoom={highlightId ? 15 : undefined}
         />
+
+        <div className="absolute bottom-3 left-3 z-30 rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 px-3 py-2 text-[11px] shadow-sm">
+          <span className="font-bold text-[var(--foreground)]">Pin key:</span> number = Akar Score · <span className="text-[#4a7c59]">green</span> = uncaught · <span className="text-[#d4a947]">gold</span> = caught
+        </div>
       </div>
 
       {/* Bottom Sheet */}
@@ -184,15 +212,23 @@ function RadarPage() {
               <span>{selectedNode.communityCatchCount} explorers caught this stall</span>
             </div>
 
+            {displayPosition && (
+              <p className={`text-sm font-medium ${selectedNode.isGrassroots && distanceToNode(selectedNode)! <= HERITAGE_CATCH_RADIUS_M ? "text-green-700" : "text-[var(--text-muted)]"}`}>
+                {selectedNode.isGrassroots && distanceToNode(selectedNode)! <= HERITAGE_CATCH_RADIUS_M
+                  ? "You are at this stall — ready to catch."
+                  : `Move within ${HERITAGE_CATCH_RADIUS_M}m to catch this stall.`}
+              </p>
+            )}
+
             <GlowButton
               size="sm"
+              disabled={!selectedNode.isGrassroots || !displayPosition || distanceToNode(selectedNode)! > HERITAGE_CATCH_RADIUS_M}
               onClick={() => {
                 setActiveNodeId(selectedNode.id);
-                setSimulatedPosition({ lat: selectedNode.lat, lng: selectedNode.lng, accuracy: 10 });
                 router.push("/scan");
               }}
             >
-              Catch This Stall
+              {selectedNode.isGrassroots ? "Catch This Stall" : "Not a heritage stall"}
             </GlowButton>
           </div>
         )}
