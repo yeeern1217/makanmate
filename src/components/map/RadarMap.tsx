@@ -99,7 +99,18 @@ export default function RadarMap({
 
     mapRef.current = map;
 
+    // Keep the canvas matched to the container. The map inits before the async
+    // "GPS unavailable" banner / Simulate bar reflow the page, so without this
+    // the canvas stays shorter than its flex-1 container (beige gap below map).
+    const resize = () => map.resize();
+    const raf = requestAnimationFrame(resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(containerRef.current);
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
+
     map.on("load", () => {
+      map.resize();
       nodes.forEach((node) => {
         if (!node.isGrassroots) {
           const el = createHypedPin();
@@ -142,6 +153,10 @@ export default function RadarMap({
     });
 
     return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
       map.remove();
       mapRef.current = null;
     };
