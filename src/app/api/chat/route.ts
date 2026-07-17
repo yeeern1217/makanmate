@@ -3,12 +3,11 @@ import { openai } from "@ai-sdk/openai";
 import { NextRequest, NextResponse } from "next/server";
 import {
   parseMenuSchema, validateLocationSchema, getIngredientLoreSchema,
-  livenessCheckSchema, magicLensSchema, migrationStorySchema, trailNarrativeSchema,
+ magicLensSchema, migrationStorySchema, trailNarrativeSchema,
 } from "@/lib/ai/tools";
 import {
-  SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE, SYSTEM_PROMPT_LIVENESS,
+  SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE,
   SYSTEM_PROMPT_MAGIC_LENS, SYSTEM_PROMPT_MIGRATION, SYSTEM_PROMPT_TRAIL_NARRATIVE,
-  SYSTEM_PROMPT_LIVENESS_TEST,
 } from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { searchExa, formatExaContext } from "@/lib/ai/exa";
@@ -39,52 +38,6 @@ function extractToolInput(result: { steps: StepLike[] }, toolName: string) {
 
 export async function POST(req: NextRequest) {
   const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = await req.json();
-
-  if (mode === "liveness-test") {
-    const result = await generateText({
-      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
-      system: SYSTEM_PROMPT_LIVENESS_TEST,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image" as const, image: `data:image/jpeg;base64,${image}` },
-          { type: "text" as const, text: "Is this a picture of a person?" },
-        ],
-      }],
-      tools: {
-        livenessCheck: tool({ description: "Report person-liveness detection result", inputSchema: livenessCheckSchema }),
-      },
-      toolChoice: "required" as const,
-      stopWhen: isStepCount(2),
-    });
-    return NextResponse.json({
-      toolName: "livenessCheck",
-      result: extractToolInput(result, "livenessCheck") ?? { isReal: true, confidence: 0.5, reason: "Unable to determine" },
-    });
-  }
-
-  if (mode === "liveness") {
-    const result = await generateText({
-      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
-      system: SYSTEM_PROMPT_LIVENESS,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image" as const, image: `data:image/jpeg;base64,${image}` },
-          { type: "text" as const, text: "Is this a real in-person photo of a food stall, or a screenshot/photo-of-screen?" },
-        ],
-      }],
-      tools: {
-        livenessCheck: tool({ description: "Report liveness detection result", inputSchema: livenessCheckSchema }),
-      },
-      toolChoice: "required" as const,
-      stopWhen: isStepCount(2),
-    });
-    return NextResponse.json({
-      toolName: "livenessCheck",
-      result: extractToolInput(result, "livenessCheck") ?? { isReal: true, confidence: 0.5, reason: "Unable to determine" },
-    });
-  }
 
   if (mode === "lore") {
     const exaResults = await searchExa(`${ingredient} in ${dish} Malaysian food history origin`);
