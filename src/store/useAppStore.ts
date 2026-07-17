@@ -5,6 +5,8 @@ import { GPSPosition, MenuResult } from "@/types/ai";
 interface AppState {
   gpsPosition: GPSPosition | null;
   setGpsPosition: (pos: GPSPosition) => void;
+  simulatedPosition: GPSPosition | null;
+  setSimulatedPosition: (pos: GPSPosition | null) => void;
   discoveredNodes: string[];
   addDiscoveredNode: (id: string) => void;
   isScanning: boolean;
@@ -20,6 +22,8 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       gpsPosition: null,
       setGpsPosition: (pos) => set({ gpsPosition: pos }),
+      simulatedPosition: null,
+      setSimulatedPosition: (pos) => set({ simulatedPosition: pos }),
       discoveredNodes: [],
       addDiscoveredNode: (id) => {
         const current = get().discoveredNodes;

@@ -108,8 +108,12 @@ export default function PokedexPage() {
           });
           const data = await response.json();
           if (data.result) {
-            setLore(data.result as IngredientLore);
-            cacheLore(cacheKey, data.result);
+            const loreWithSources: IngredientLore = {
+              ...(data.result as IngredientLore),
+              sources: data.sources ?? [],
+            };
+            setLore(loreWithSources);
+            cacheLore(cacheKey, loreWithSources);
           }
         } catch (err) {
           console.error("Lore fetch error:", err);

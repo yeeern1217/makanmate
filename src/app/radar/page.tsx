@@ -12,6 +12,8 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import GlowButton from "@/components/ui/GlowButton";
 import LoadingPulse from "@/components/ui/LoadingPulse";
 import ProximityGuide from "@/components/map/ProximityGuide";
+import LocationSimulator from "@/components/map/LocationSimulator";
+import ExaStallSearch from "@/components/map/ExaStallSearch";
 
 const RadarMap = dynamic(() => import("@/components/map/RadarMap"), {
   ssr: false,
@@ -40,6 +42,8 @@ function RadarPage() {
   const highlightId = searchParams.get("highlight");
   const gpsPosition = useAppStore((s) => s.gpsPosition);
   const setGpsPosition = useAppStore((s) => s.setGpsPosition);
+  const simulatedPosition = useAppStore((s) => s.simulatedPosition);
+  const setSimulatedPosition = useAppStore((s) => s.setSimulatedPosition);
   const discoveredNodes = useAppStore((s) => s.discoveredNodes);
   const setActiveNodeId = useAppStore((s) => s.setActiveNodeId);
   const [selectedNode, setSelectedNode] = useState<HeritageNode | null>(null);
@@ -51,24 +55,21 @@ function RadarPage() {
       .catch(() => setGpsError(true));
   }, [setGpsPosition]);
 
-  // Auto-select and center on highlighted node from query param
-  useEffect(() => {
-    if (!highlightId) return;
-    const node = HERITAGE_NODES.find((n) => n.id === highlightId);
-    if (node) {
-      setSelectedNode(node);
-    }
-  }, [highlightId]);
+  const displayPosition = simulatedPosition ?? gpsPosition;
 
   const distanceToNode = (node: HeritageNode) => {
-    if (!gpsPosition) return null;
-    return Math.round(haversineDistance(gpsPosition.lat, gpsPosition.lng, node.lat, node.lng));
+    if (!displayPosition) return null;
+    return Math.round(haversineDistance(displayPosition.lat, displayPosition.lng, node.lat, node.lng));
   };
 
   const formatDistance = (meters: number) => {
     if (meters < 1000) return `${meters}m away`;
     return `${(meters / 1000).toFixed(1)}km away`;
   };
+
+  if (process.env.NEXT_PUBLIC_STALL_SOURCE === "exa") {
+    return <ExaStallSearch />;
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -89,6 +90,8 @@ function RadarPage() {
         </span>
       </div>
 
+      {process.env.NODE_ENV !== "production" && <LocationSimulator />}
+
       {gpsError && (
         <div className="bg-amber-50 text-amber-700 text-xs text-center py-2 border-b border-amber-200">
           GPS unavailable — showing all nodes without distance
@@ -97,11 +100,11 @@ function RadarPage() {
 
       {/* Map + Proximity Guide */}
       <div className="relative flex-1 min-h-0">
-        <ProximityGuide nodes={HERITAGE_NODES} userPosition={gpsPosition} />
+        <ProximityGuide nodes={HERITAGE_NODES} userPosition={displayPosition} />
         <RadarMap
           nodes={HERITAGE_NODES}
           discoveredNodes={discoveredNodes}
-          userPosition={gpsPosition}
+          userPosition={displayPosition}
           onNodeClick={setSelectedNode}
           initialCenter={
             highlightId
@@ -165,7 +168,7 @@ function RadarPage() {
                 <p className="truncate text-base font-bold leading-tight text-[var(--foreground)]">
                   {selectedNode.signature_dish}
                 </p>
-                {gpsPosition && (
+                {displayPosition && (
                   <p className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">
                     📍 {formatDistance(distanceToNode(selectedNode)!)} away
                   </p>
@@ -185,6 +188,7 @@ function RadarPage() {
               size="sm"
               onClick={() => {
                 setActiveNodeId(selectedNode.id);
+                setSimulatedPosition({ lat: selectedNode.lat, lng: selectedNode.lng, accuracy: 10 });
                 router.push("/scan");
               }}
             >
