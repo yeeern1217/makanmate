@@ -96,14 +96,14 @@ export default function ScanPage() {
       }
 
       const node = nearest.node;
-      addDiscoveredNode(node.id);
-
       if (!node.isGrassroots) {
         setToast(`${node.name} is a hyped spot — node unlocked, but no card.`);
         setStage("menu");
         setScanning(false);
         return;
       }
+
+      addDiscoveredNode(node.id);
 
       const akarScore = computeAkarScore(node);
       const rarity = classifyRarity(akarScore);

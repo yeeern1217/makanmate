@@ -2,21 +2,15 @@
 import { useEffect, useState } from "react";
 import type { RarityClass, CardTier, CulturalOrigin } from "@/types/card";
 import StallCard from "./StallCard";
+import { RARITY_CARD_STYLE, RARITY_NAME, RARITY_RANK } from "@/lib/rarity";
 
 type Phase = "shrink" | "flip" | "reveal" | "done";
 
 const RARITY_GLOW: Record<RarityClass, string> = {
-  common: "shadow-[0_0_40px_var(--tier-bronze)]",
-  uncommon: "shadow-[0_0_50px_var(--tier-silver)]",
-  rare: "shadow-[0_0_60px_var(--tier-gold)]",
-  legendary: "shadow-[0_0_80px_#d946ef]",
-};
-
-const RARITY_LABEL: Record<RarityClass, string> = {
-  common: "Common",
-  uncommon: "Uncommon",
-  rare: "Rare",
-  legendary: "Legendary!",
+  common: "shadow-[0_0_40px_#cd7f32]",
+  uncommon: "shadow-[0_0_55px_#aab7c4]",
+  rare: "shadow-[0_0_70px_#d4a947]",
+  legendary: "shadow-[0_0_100px_#d946ef]",
 };
 
 export default function CatchAnimation({
@@ -54,10 +48,9 @@ export default function CatchAnimation({
       {/* Rarity burst */}
       {(phase === "reveal" || phase === "done") && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div
-            className={`w-64 h-64 rounded-full ${RARITY_GLOW[rarity]} animate-[pulse-warm_1s_ease-out]`}
-            style={{ opacity: 0.5 }}
-          />
+          <div className={`w-64 h-64 rounded-full ${RARITY_GLOW[rarity]} animate-[pulse-warm_1s_ease-out]`} style={{ opacity: 0.5 }} />
+          {rarity === "legendary" && <div className="absolute h-72 w-72 rounded-full border-2 border-fuchsia-300/70 animate-[rarity-sparkle_1.2s_ease-in-out_infinite]" />}
+          {rarity === "rare" && <div className="absolute h-64 w-64 rounded-full border border-amber-300/70 animate-[rarity-sparkle_1.8s_ease-in-out_infinite]" />}
         </div>
       )}
 
@@ -97,7 +90,10 @@ export default function CatchAnimation({
       {phase === "reveal" && (
         <div className="absolute bottom-32 animate-fade-in">
           <p className="text-2xl font-black text-white text-center">
-            {RARITY_LABEL[rarity]}
+            <span className="block text-5xl font-black tracking-widest" style={{ color: RARITY_CARD_STYLE[rarity].accent, textShadow: "0 3px 10px #000" }}>
+              {RARITY_RANK[rarity]}
+            </span>
+            <span className="mt-1 block text-lg uppercase tracking-[0.25em]">{RARITY_NAME[rarity]}</span>
           </p>
         </div>
       )}

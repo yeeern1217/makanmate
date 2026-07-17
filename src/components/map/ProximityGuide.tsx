@@ -59,7 +59,7 @@ export default function ProximityGuide({
       }
     }
     if (!nearest) return null;
-    return { node: nearest, level: classifyDistance(minDist) };
+    return { node: nearest, distanceMeters: Math.round(minDist), level: classifyDistance(minDist) };
   }, [userPosition, grassrootsNodes]);
 
   const level = proximity?.level ?? "far";
@@ -79,13 +79,16 @@ export default function ProximityGuide({
     speak(phrase, getPersonaForRegion(proximity.node.city).id);
   }, [proximity, phrase]);
 
-  if (!phrase) return null;
+  if (!phrase || !proximity) return null;
 
   return (
     <div
       className={`absolute top-2 left-2 right-2 z-30 rounded-xl border-2 px-4 py-3 shadow-lg transition-all duration-500 ${LEVEL_STYLES[level]}`}
     >
-      <p className="text-sm font-semibold leading-snug">{phrase}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wide opacity-70">
+        {proximity.node.name} · {proximity.distanceMeters}m away
+      </p>
+      <p className="mt-0.5 text-sm font-semibold leading-snug">{phrase}</p>
     </div>
   );
 }
