@@ -245,10 +245,20 @@ export default function TrailPage() {
         {/* Active trail display */}
         {activeTrail && (
           <>
-            <h2 className="text-sm font-bold text-center">{activeTrail.name}</h2>
-
-            {/* Trail map */}
-            {stops.length > 0 && <TrailMap stops={stops} />}
+            {/* Trail map — fills the screen down to the bottom nav.
+                Height = viewport - header (~3.5rem) - bottom nav (72px).
+                -mx-4 / -mt-4 break out of the scroll container's padding so it
+                sits edge-to-edge starting right under the header. */}
+            {stops.length > 0 ? (
+              <div className="relative -mx-4 -mt-4 h-[calc(100dvh-3.5rem-72px)] min-h-[320px] border-b-2 border-[var(--border)]">
+                <TrailMap stops={stops} />
+                <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-1 shadow-sm backdrop-blur-sm">
+                  <span className="text-xs font-bold text-[var(--foreground)]">{activeTrail.name}</span>
+                </div>
+              </div>
+            ) : (
+              <h2 className="text-sm font-bold text-center">{activeTrail.name}</h2>
+            )}
 
             {/* Historical thread */}
             {loadingNarrative && <LoadingPulse text="Weaving the historical thread..." />}

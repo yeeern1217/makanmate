@@ -36,7 +36,19 @@ export default function TrailMap({ stops }: { stops: TrailStop[] }) {
 
     mapRef.current = map;
 
+    // Fix "half map": MapLibre reads the container size once at init. With the
+    // dynamic import inside a scroll container (and on device/orientation
+    // changes), that size can be stale, so the canvas fills only part of the
+    // box. Re-run resize after layout settles and whenever the box changes.
+    const resize = () => map.resize();
+    const raf = requestAnimationFrame(resize);
+    const ro = new ResizeObserver(resize);
+    ro.observe(containerRef.current);
+    window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
+
     map.on("load", () => {
+      map.resize();
       // Route line
       if (stops.length >= 2) {
         map.addSource("route", {
@@ -95,16 +107,14 @@ export default function TrailMap({ stops }: { stops: TrailStop[] }) {
     });
 
     return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
       map.remove();
       mapRef.current = null;
     };
   }, [stops]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="w-full rounded-xl overflow-hidden border-2 border-[var(--border)]"
-      style={{ height: "240px" }}
-    />
-  );
+  return <div ref={containerRef} className="h-full w-full" />;
 }
