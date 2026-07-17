@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { captureFrameAsBase64 } from "@/lib/camera";
 import { getCurrentPosition } from "@/lib/gps";
@@ -61,9 +61,20 @@ export default function ScanPage() {
   const addDiscoveredNode = useAppStore((s) => s.addDiscoveredNode);
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const addCard = useCardStore((s) => s.addCard);
+  const cards = useCardStore((s) => s.cards);
+  const phraseAbortRef = useRef<AbortController | null>(null);
 
   const onCameraStream = useCallback(() => setCameraReady(true), []);
   const onCameraError = useCallback(() => setCameraError(true), []);
+
+  useEffect(() => {
+    if (!showRecommendation) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowRecommendation(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [showRecommendation]);
 
   const handleStallCapture = async () => {
     if (scanning) return;
@@ -145,13 +156,15 @@ export default function ScanPage() {
 
   const handleCatchComplete = () => {
     setShowCatchAnim(false);
-    const cards = useCardStore.getState().cards;
     const profile = buildTasteProfile(cards, HERITAGE_NODES);
     const recs = getTopRecommendations(profile, HERITAGE_NODES, 1);
     if (recs.length > 0) {
       const rec = recs[0];
       setRecommendation(rec);
       setShowRecommendation(true);
+      phraseAbortRef.current?.abort();
+      const controller = new AbortController();
+      phraseAbortRef.current = controller;
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,10 +174,11 @@ export default function ScanPage() {
           dishName: rec.node.signature_dish,
           reasoning: rec.reasoning,
         }),
+        signal: controller.signal,
       })
         .then((res) => res.json())
         .then((data) => setPhrasedSuggestion(data.result?.suggestion ?? null))
-        .catch(() => setPhrasedSuggestion(null));
+        .catch((err) => { if (err.name !== "AbortError") setPhrasedSuggestion(null); });
     }
     setStage("menu");
   };
@@ -244,11 +258,20 @@ export default function ScanPage() {
 
       {/* Recommendation card overlay */}
       {showRecommendation && recommendation && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rec-card-title"
+          className="fixed inset-0 z-40 flex items-end justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in"
+        >
           <RecommendationCard
             recommendation={recommendation}
             phrasedSuggestion={phrasedSuggestion}
-            onDismiss={() => setShowRecommendation(false)}
+            onDismiss={() => {
+              phraseAbortRef.current?.abort();
+              setPhrasedSuggestion(null);
+              setShowRecommendation(false);
+            }}
             onNavigate={() => {
               setShowRecommendation(false);
               router.push(`/radar?highlight=${recommendation.node.id}`);

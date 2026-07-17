@@ -35,7 +35,7 @@ export default function RecommendationCard({
 
       {/* Stall name + heritage score */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-black text-[var(--foreground)] leading-tight">
+        <h3 id="rec-card-title" className="text-lg font-black text-[var(--foreground)] leading-tight">
           {node.name}
         </h3>
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--accent-secondary)]/20 text-[var(--accent-secondary)] border border-[var(--accent-secondary)]/30">
@@ -44,14 +44,17 @@ export default function RecommendationCard({
       </div>
 
       {/* Phrased suggestion */}
-      <p className="text-sm italic text-[var(--text-muted)] mb-4 leading-relaxed">
+      <p
+        aria-live="polite"
+        className={`text-sm italic text-[var(--text-muted)] mb-4 leading-relaxed${phrasedSuggestion === null ? " animate-pulse" : ""}`}
+      >
         {phrasedSuggestion ?? fallbackSuggestion}
       </p>
 
       {/* Score breakdown bars */}
       <div className="space-y-2 mb-4">
         {SCORE_BARS.map(({ key, label, color }) => {
-          const value = Math.round(breakdown[key]);
+          const value = Math.min(100, Math.max(0, Math.round(breakdown[key])));
           return (
             <div key={key}>
               <div className="flex items-center justify-between mb-0.5">
@@ -64,8 +67,13 @@ export default function RecommendationCard({
               </div>
               <div className="w-full h-[6px] rounded-full bg-[var(--foreground)]/10">
                 <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  className="h-full rounded-full transition-[width] duration-700 ease-out"
                   style={{ width: `${value}%`, backgroundColor: color }}
+                  role="progressbar"
+                  aria-valuenow={value}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${label}: ${value}%`}
                 />
               </div>
             </div>
@@ -76,9 +84,9 @@ export default function RecommendationCard({
       {/* Reasoning tags */}
       {reasoning.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-4">
-          {reasoning.map((reason, i) => (
+          {reasoning.map((reason) => (
             <span
-              key={i}
+              key={reason}
               className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--foreground)]/5 text-[var(--text-muted)] border border-[var(--foreground)]/10"
             >
               {reason}
@@ -90,12 +98,14 @@ export default function RecommendationCard({
       {/* Action buttons */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onNavigate}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[var(--foreground)] bg-[var(--accent-secondary)] hover:brightness-110 transition-all active:scale-95"
         >
           Navigate
         </button>
         <button
+          type="button"
           onClick={onDismiss}
           className="text-sm font-semibold text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--foreground)] transition-colors"
         >

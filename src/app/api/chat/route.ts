@@ -175,6 +175,16 @@ export async function POST(req: NextRequest) {
   }
 
   if (mode === "phrase-recommendation") {
+    if (typeof stallName !== "string" || stallName.length > 200) {
+      return NextResponse.json({ error: "Invalid stallName" }, { status: 400 });
+    }
+    if (typeof dishName !== "string" || dishName.length > 200) {
+      return NextResponse.json({ error: "Invalid dishName" }, { status: 400 });
+    }
+    if (!Array.isArray(reasoning) || !reasoning.every((r: unknown) => typeof r === "string" && (r as string).length <= 300)) {
+      return NextResponse.json({ error: "reasoning must be an array of short strings" }, { status: 400 });
+    }
+
     const result = await generateText({
       model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_PHRASE_RECOMMENDATION,
