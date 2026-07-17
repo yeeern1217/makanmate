@@ -12,6 +12,7 @@ interface CardState {
   updateAkarScore: (cardId: string, delta: number) => void;
   addExploredNode: (dishId: string, nodeId: string) => void;
   addTrail: (trail: HeritageTrail) => void;
+  updateTrail: (trailId: string, patch: Partial<HeritageTrail>) => void;
 
   getAkarScoreTotal: () => number;
   getHeritageUnlockedTotal: () => number;
@@ -63,6 +64,13 @@ export const useCardStore = create<CardState>()(
 
       addTrail: (trail) =>
         set((s) => ({ trails: [...s.trails, trail] })),
+
+      updateTrail: (trailId, patch) =>
+        set((s) => ({
+          trails: s.trails.map((t) =>
+            t.id === trailId ? { ...t, ...patch } : t
+          ),
+        })),
 
       getAkarScoreTotal: () =>
         get().cards.reduce((sum, c) => sum + c.akarScore, 0),

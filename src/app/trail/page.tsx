@@ -21,10 +21,17 @@ const TrailMap = dynamic(() => import("@/components/trail/TrailMap"), {
   loading: () => <LoadingPulse text="Loading map..." />,
 });
 
+function buildFallbackThread(trail: HeritageTrail): string {
+  const origins = trail.culturalDiversity.join(", ");
+  const stops = trail.cardIds.length;
+  return `Your trail links ${stops} heritage stalls, weaving ${origins} food traditions into one journey through Malaysia's living street-food history.`;
+}
+
 export default function TrailPage() {
   const cards = useCardStore((s) => s.cards);
   const trails = useCardStore((s) => s.trails);
   const addTrail = useCardStore((s) => s.addTrail);
+  const updateTrail = useCardStore((s) => s.updateTrail);
   const heritageUnlocked = useCardStore((s) => s.getHeritageUnlockedTotal());
   const akarTotal = useCardStore((s) => s.getAkarScoreTotal());
 
@@ -57,19 +64,19 @@ export default function TrailPage() {
         headers: { "Content-Type": "application/json" },
       });
       const data = await response.json();
-      if (data.result?.historical_thread) {
-        const updatedTrail = {
-          ...trail,
-          historicalThread: data.result.historical_thread,
-        };
-        setActiveTrail(updatedTrail);
-      }
+      const thread: string =
+        data.result?.historical_thread ?? buildFallbackThread(trail);
+      updateTrail(trail.id, { historicalThread: thread });
+      setActiveTrail({ ...trail, historicalThread: thread });
     } catch (err) {
       console.error("Trail narrative error:", err);
+      const thread = buildFallbackThread(trail);
+      updateTrail(trail.id, { historicalThread: thread });
+      setActiveTrail({ ...trail, historicalThread: thread });
     } finally {
       setLoadingNarrative(false);
     }
-  }, [cards, trails, addTrail]);
+  }, [cards, trails, addTrail, updateTrail]);
 
   const handleShare = async () => {
     if (!shareRef.current) return;
