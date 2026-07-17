@@ -4,11 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   parseMenuSchema, validateLocationSchema, getIngredientLoreSchema,
   livenessCheckSchema, magicLensSchema, migrationStorySchema, trailNarrativeSchema,
+  phraseRecommendationSchema,
 } from "@/lib/ai/tools";
 import {
   SYSTEM_PROMPT_MENU_VISION, SYSTEM_PROMPT_INGREDIENT_LORE, SYSTEM_PROMPT_LIVENESS,
   SYSTEM_PROMPT_MAGIC_LENS, SYSTEM_PROMPT_MIGRATION, SYSTEM_PROMPT_TRAIL_NARRATIVE,
-  SYSTEM_PROMPT_LIVENESS_TEST,
+  SYSTEM_PROMPT_LIVENESS_TEST, SYSTEM_PROMPT_PHRASE_RECOMMENDATION,
 } from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { searchTavily } from "@/lib/search/tavily";
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = body;
+  const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint, stallName, dishName, reasoning } = body;
 
   if (mode === "liveness-test") {
     const result = await generateText({
@@ -171,6 +172,29 @@ export async function POST(req: NextRequest) {
       stopWhen: isStepCount(2),
     });
     return NextResponse.json({ toolName: "trailNarrative", result: extractToolInput(result, "trailNarrative") });
+  }
+
+  if (mode === "phrase-recommendation") {
+    const result = await generateText({
+      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      system: SYSTEM_PROMPT_PHRASE_RECOMMENDATION,
+      messages: [{
+        role: "user",
+        content: `Recommend "${stallName}" (signature dish: ${dishName}). Reasoning: ${(reasoning ?? []).join("; ")}`,
+      }],
+      tools: {
+        phraseRecommendation: tool({
+          description: "Generate a natural-language recommendation suggestion",
+          inputSchema: phraseRecommendationSchema,
+        }),
+      },
+      toolChoice: "required" as const,
+      stopWhen: isStepCount(2),
+    });
+    return NextResponse.json({
+      toolName: "phraseRecommendation",
+      result: extractToolInput(result, "phraseRecommendation"),
+    });
   }
 
   // Default: vision mode

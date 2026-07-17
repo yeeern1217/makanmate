@@ -8,6 +8,9 @@ import { useAppStore } from "@/store/useAppStore";
 import { useCardStore } from "@/store/useCardStore";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { computeAkarScore, classifyRarity } from "@/lib/scoring/akar-score";
+import { buildTasteProfile } from "@/lib/recommender/taste-profile";
+import { getTopRecommendations } from "@/lib/recommender/recommend";
+import type { ScoredRecommendation } from "@/lib/recommender/types";
 import { ParsedDish } from "@/types/ai";
 import CameraViewport from "@/components/scan/CameraViewport";
 import CaptureButton from "@/components/scan/CaptureButton";
@@ -16,6 +19,7 @@ import ManualDishDropdown from "@/components/scan/ManualDishDropdown";
 import ToastNotification from "@/components/ui/ToastNotification";
 import LoadingPulse from "@/components/ui/LoadingPulse";
 import CatchAnimation from "@/components/catch/CatchAnimation";
+import RecommendationCard from "@/components/catch/RecommendationCard";
 import type { CapturedCard } from "@/types/card";
 
 type Stage = "stall" | "menu";
@@ -51,6 +55,9 @@ export default function ScanPage() {
   const [catchCard, setCatchCard] = useState<CapturedCard | null>(null);
   const [showCatchAnim, setShowCatchAnim] = useState(false);
   const [stallImage, setStallImage] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<ScoredRecommendation | null>(null);
+  const [phrasedSuggestion, setPhrasedSuggestion] = useState<string | null>(null);
+  const [showRecommendation, setShowRecommendation] = useState(false);
   const addDiscoveredNode = useAppStore((s) => s.addDiscoveredNode);
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const addCard = useCardStore((s) => s.addCard);
@@ -138,6 +145,27 @@ export default function ScanPage() {
 
   const handleCatchComplete = () => {
     setShowCatchAnim(false);
+    const cards = useCardStore.getState().cards;
+    const profile = buildTasteProfile(cards, HERITAGE_NODES);
+    const recs = getTopRecommendations(profile, HERITAGE_NODES, 1);
+    if (recs.length > 0) {
+      const rec = recs[0];
+      setRecommendation(rec);
+      setShowRecommendation(true);
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "phrase-recommendation",
+          stallName: rec.node.name,
+          dishName: rec.node.signature_dish,
+          reasoning: rec.reasoning,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => setPhrasedSuggestion(data.result?.suggestion ?? null))
+        .catch(() => setPhrasedSuggestion(null));
+    }
     setStage("menu");
   };
 
@@ -212,6 +240,21 @@ export default function ScanPage() {
           capturedPhoto={stallImage ?? undefined}
           onComplete={handleCatchComplete}
         />
+      )}
+
+      {/* Recommendation card overlay */}
+      {showRecommendation && recommendation && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in">
+          <RecommendationCard
+            recommendation={recommendation}
+            phrasedSuggestion={phrasedSuggestion}
+            onDismiss={() => setShowRecommendation(false)}
+            onNavigate={() => {
+              setShowRecommendation(false);
+              router.push(`/radar?highlight=${recommendation.node.id}`);
+            }}
+          />
+        </div>
       )}
 
       {/* Camera or fallback */}

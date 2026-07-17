@@ -69,3 +69,7 @@ export const trailNarrativeSchema = z.object({
   historical_thread: z.string(),
   cultural_connections: z.string(),
 });
+
+export const phraseRecommendationSchema = z.object({
+  suggestion: z.string(),
+});
