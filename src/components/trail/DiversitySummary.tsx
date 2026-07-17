@@ -94,8 +94,8 @@ export default function DiversitySummary({
             {reflection.rarityHighlight}
           </p>
           <p
-            className="text-xs text-[var(--foreground)] leading-relaxed font-semibold"
-            style={{ color: "#4a7c59" }}
+            className="text-xs leading-relaxed font-semibold"
+            style={{ color: "var(--accent-primary)" }}
           >
             {reflection.invisibilityNote}
           </p>
