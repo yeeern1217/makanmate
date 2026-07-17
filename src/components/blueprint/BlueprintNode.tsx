@@ -28,7 +28,6 @@ function BlueprintNode({
   position,
   isActive,
   isExplored,
-  onSelect,
 }: {
   id: string;
   emoji: string;
@@ -65,12 +64,9 @@ function BlueprintNode({
       </mesh>
 
       <Billboard>
-        <Html center style={{ pointerEvents: onSelect ? "auto" : "none", userSelect: "none" }}>
+        <Html center style={{ pointerEvents: "none", userSelect: "none" }}>
           <div
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); onSelect?.(id, category); }}
             style={{
-              cursor: onSelect ? "pointer" : "default",
               fontSize: "44px",
               lineHeight: 1,
               filter: isActive
@@ -89,12 +85,9 @@ function BlueprintNode({
       </Billboard>
 
       <Billboard position={[0, -0.75, 0]}>
-        <Html center style={{ pointerEvents: onSelect ? "auto" : "none", userSelect: "none" }}>
+        <Html center style={{ pointerEvents: "none", userSelect: "none" }}>
           <div
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); onSelect?.(id, category); }}
             style={{
-              cursor: onSelect ? "pointer" : "default",
               color: isActive ? color : "var(--foreground)",
               fontSize: "14px",
               fontWeight: isActive ? 700 : 500,

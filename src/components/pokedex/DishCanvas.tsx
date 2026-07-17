@@ -4,7 +4,6 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Float, Stars, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { DishEntry } from "@/types/heritage";
-import IngredientModel from "./IngredientModel";
 import BlueprintNode from "@/components/blueprint/BlueprintNode";
 import type { NodeCategory } from "@/components/blueprint/BlueprintNode";
 
@@ -41,7 +40,7 @@ function OrbitalRing({
 function distributeOnRing(count: number, radius: number, ySpread: number = 0.3): [number, number, number][] {
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * Math.PI * 2;
-    const y = (Math.random() - 0.5) * ySpread * 2;
+    const y = (Math.sin(i * 2.399) * 0.5) * ySpread * 2;
     return [Math.cos(angle) * radius, y, Math.sin(angle) * radius] as [number, number, number];
   });
 }

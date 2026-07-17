@@ -27,6 +27,9 @@ export default function PokedexPage() {
   const dishId = params.dishId as string;
   const dish = POKEDEX_ENTRIES.find((d) => d.id === dishId);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const getLore = usePokedexStore((s) => s.getLore);
   const cacheLore = usePokedexStore((s) => s.cacheLore);
 
@@ -37,7 +40,7 @@ export default function PokedexPage() {
   const evolveCard = useCardStore((s) => s.evolveCard);
   const updateAkarScore = useCardStore((s) => s.updateAkarScore);
 
-  const card = cards.find((c) => c.dishId === dishId);
+  const card = mounted ? cards.find((c) => c.dishId === dishId) : undefined;
   const canEvolve = card && card.tier !== "gold";
 
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -51,11 +54,10 @@ export default function PokedexPage() {
   const [evolutionFrom, setEvolutionFrom] = useState<CardTier>("bronze");
   const [evolutionTo, setEvolutionTo] = useState<CardTier>("silver");
 
-  const exploredNodeIds = dish ? (exploredNodes[dish.id] ?? []) : [];
+  const exploredNodeIds = mounted && dish ? (exploredNodes[dish.id] ?? []) : [];
 
-  // Mirror activeNodeId into a ref so handleNodeTap can stay stable across
-  // renders (otherwise every tap recreates it, defeating BlueprintNode memo).
   const activeNodeIdRef = useRef<string | null>(null);
+  const lastTapTime = useRef(0);
   useEffect(() => {
     activeNodeIdRef.current = activeNodeId;
   }, [activeNodeId]);
@@ -63,6 +65,10 @@ export default function PokedexPage() {
   const handleNodeTap = useCallback(
     async (nodeId: string, category: NodeCategory) => {
       if (!dish) return;
+
+      const now = Date.now();
+      if (now - lastTapTime.current < 200) return;
+      lastTapTime.current = now;
 
       if (activeNodeIdRef.current === nodeId) {
         setActiveNodeId(null);
@@ -178,7 +184,7 @@ export default function PokedexPage() {
         <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Blueprint</h1>
         <div className="text-right">
           <p className="text-[10px] text-[var(--text-muted)]">Heritage Unlocked</p>
-          <p className="text-sm font-bold text-[var(--accent-secondary)]" suppressHydrationWarning>{heritageUnlocked}</p>
+          <p className="text-sm font-bold text-[var(--accent-secondary)]">{mounted ? heritageUnlocked : 0}</p>
         </div>
       </div>
 
@@ -237,9 +243,66 @@ export default function PokedexPage() {
         </div>
       )}
 
-      <p className="text-center text-xs text-[var(--text-muted)] mb-1">
-        Tap any node to explore its heritage
-      </p>
+      {/* Node picker — plain DOM buttons */}
+      <div className="px-4 pb-2 flex flex-wrap justify-center gap-1.5">
+        {dish.ingredients.map((ing) => (
+          <button
+            key={ing.id}
+            onClick={() => handleNodeTap(ing.id, "ingredient")}
+            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+              activeNodeId === ing.id
+                ? "bg-[#4a7c59]/20 border-[#4a7c59] text-[#4a7c59] font-bold scale-105"
+                : exploredNodeIds.includes(ing.id)
+                  ? "bg-[var(--surface)] border-[#4a7c59]/30 text-[var(--foreground)]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+            }`}
+          >
+            {ing.emoji} {ing.name} {exploredNodeIds.includes(ing.id) && "✓"}
+          </button>
+        ))}
+        {dish.techniques?.map((tech) => (
+          <button
+            key={tech.id}
+            onClick={() => handleNodeTap(tech.id, "technique")}
+            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+              activeNodeId === tech.id
+                ? "bg-[#c4553a]/20 border-[#c4553a] text-[#c4553a] font-bold scale-105"
+                : exploredNodeIds.includes(tech.id)
+                  ? "bg-[var(--surface)] border-[#c4553a]/30 text-[var(--foreground)]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+            }`}
+          >
+            {tech.emoji} {tech.name} {exploredNodeIds.includes(tech.id) && "✓"}
+          </button>
+        ))}
+        <button
+          onClick={() => handleNodeTap(`${dish.id}-migration`, "migration")}
+          className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+            activeNodeId === `${dish.id}-migration`
+              ? "bg-[#d4a947]/20 border-[#d4a947] text-[#d4a947] font-bold scale-105"
+              : exploredNodeIds.includes(`${dish.id}-migration`)
+                ? "bg-[var(--surface)] border-[#d4a947]/30 text-[var(--foreground)]"
+                : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+          }`}
+        >
+          🧭 Migration {exploredNodeIds.includes(`${dish.id}-migration`) && "✓"}
+        </button>
+        {dish.dialectPhrases?.map((dp, i) => (
+          <button
+            key={`dialect-${i}`}
+            onClick={() => handleNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
+            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+              activeNodeId === `${dish.id}-dialect-${i}`
+                ? "bg-[#6b5ce7]/20 border-[#6b5ce7] text-[#6b5ce7] font-bold scale-105"
+                : exploredNodeIds.includes(`${dish.id}-dialect-${i}`)
+                  ? "bg-[var(--surface)] border-[#6b5ce7]/30 text-[var(--foreground)]"
+                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+            }`}
+          >
+            💬 {dp.phrase} {exploredNodeIds.includes(`${dish.id}-dialect-${i}`) && "✓"}
+          </button>
+        ))}
+      </div>
 
       {/* 3D Blueprint Canvas */}
       <div className="relative flex-1">
