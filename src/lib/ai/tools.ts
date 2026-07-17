@@ -34,6 +34,10 @@ export const getIngredientLoreSchema = z.object({
   lore_text: z.string(),
   fun_fact: z.string(),
   origin_region: z.string(),
+  sources: z.array(z.object({
+    title: z.string(),
+    url: z.string().url(),
+  })).optional(),
 });
 
 export const magicLensSchema = z.object({

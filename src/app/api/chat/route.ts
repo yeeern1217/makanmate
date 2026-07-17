@@ -11,6 +11,7 @@ import {
   SYSTEM_PROMPT_LIVENESS_TEST,
 } from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
+import { searchTavily } from "@/lib/search/tavily";
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -37,7 +38,13 @@ function extractToolInput(result: { steps: StepLike[] }, toolName: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { image, lat, lng, mode, ingredient, dish, lore_hint, stalls, migrationHint } = body;
 
   if (mode === "liveness-test") {
     const result = await generateText({
@@ -86,10 +93,29 @@ export async function POST(req: NextRequest) {
   }
 
   if (mode === "lore") {
+    if (!ingredient || typeof ingredient !== "string" || !dish || typeof dish !== "string") {
+      return NextResponse.json({ error: "ingredient and dish are required for lore mode" }, { status: 400 });
+    }
+
+    // Step 1: Search for real web context
+    const searchResults = await searchTavily(
+      `${ingredient} ${dish} Malaysian food culture history origin`
+    );
+
+    // Step 2: Build user message with or without search context
+    let userMessage = `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}`;
+    if (searchResults.length > 0) {
+      const searchContext = searchResults
+        .map((r, i) => `[Source ${i + 1}: ${r.title}]\n${r.content}`)
+        .join("\n\n");
+      userMessage = `Here are web search results about this ingredient:\n\n${searchContext}\n\n---\n\nUsing the search results above as your primary source, tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}`;
+    }
+
+    // Step 3: Gemini synthesis
     const result = await generateText({
       model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
       system: SYSTEM_PROMPT_INGREDIENT_LORE,
-      messages: [{ role: "user", content: `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}` }],
+      messages: [{ role: "user", content: userMessage }],
       tools: {
         getIngredientLore: tool({ description: "Generate cultural storytelling for an ingredient", inputSchema: getIngredientLoreSchema }),
       },
