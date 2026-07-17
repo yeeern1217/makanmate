@@ -157,8 +157,9 @@ npm install --legacy-peer-deps
 
 Create `.env.local`:
 ```
-GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
-TAVILY_API_KEY=your_key_here          # optional
+OPENAI_AI_API_KEY=your_key_here
+EXA_API_KEY=your_key_here          # optional
+ELEVENLABS_API_KEY=your_key_here
 NEXT_PUBLIC_MOCK_GPS=true              # for local testing
 NEXT_PUBLIC_MOCK_GPS_LAT=5.4141        # Penang
 NEXT_PUBLIC_MOCK_GPS_LNG=100.3288
