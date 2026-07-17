@@ -11,6 +11,9 @@ const WEIGHT_DIVERSITY = 0.20;
 const REVIEW_CAP = 200;
 const PROXIMITY_CLOSE_M = 500;
 const PROXIMITY_FAR_M = 5000;
+// Recommendations should be practical next stops. Keep the recommendation in
+// the user's current area when GPS is available (KL must not suggest Penang).
+export const MAX_RECOMMENDATION_DISTANCE_M = 50000;
 
 // ── Scoring ─────────────────────────────────────────────────────────
 
@@ -104,6 +107,8 @@ export function computeRecommendationScore(
 
   if (proximityScore > 60 && userLat !== undefined && userLng !== undefined) {
     reasoning.push(`Just ${Math.round(distanceM!)}m from you`);
+  } else if (distanceM !== undefined && distanceM > MAX_RECOMMENDATION_DISTANCE_M) {
+    reasoning.push(`Further away — no nearby uncaptured stalls available`);
   }
 
   if (diversityScore * WEIGHT_DIVERSITY >= 20) {
@@ -146,10 +151,26 @@ export function getTopRecommendations(
   userLat?: number,
   userLng?: number,
 ): ScoredRecommendation[] {
-  return nodes
+  const uncaptured = nodes
     .filter(
       (n) => !tasteProfile.capturedStallIds.has(n.id) && n.isGrassroots,
-    )
+    );
+
+  const nearby = userLat !== undefined && userLng !== undefined
+    ? uncaptured.filter((node) => haversineDistance(userLat, userLng, node.lat, node.lng) <= MAX_RECOMMENDATION_DISTANCE_M)
+    : uncaptured;
+
+  // A sparse dataset should still produce a recommendation. If no stall is
+  // inside the practical radius, use the nearest uncaptured stalls instead of
+  // silently returning nothing.
+  const candidates = nearby.length > 0
+    ? nearby
+    : [...uncaptured].sort((a, b) => {
+        if (userLat === undefined || userLng === undefined) return 0;
+        return haversineDistance(userLat, userLng, a.lat, a.lng) - haversineDistance(userLat, userLng, b.lat, b.lng);
+      }).slice(0, Math.max(count, 1));
+
+  return candidates
     .map((n) =>
       computeRecommendationScore(n, tasteProfile, userLat, userLng),
     )

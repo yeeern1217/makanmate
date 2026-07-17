@@ -128,7 +128,8 @@ function RadarPage() {
           nodes={HERITAGE_NODES}
           discoveredNodes={discoveredNodes}
           userPosition={displayPosition}
-          targetNodeId={nearestGrassroots?.node.id}
+          targetNodeId={highlightId ?? nearestGrassroots?.node.id}
+          focusNodeId={highlightId}
           onNodeClick={setSelectedNode}
           initialCenter={
             highlightId

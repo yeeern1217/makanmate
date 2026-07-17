@@ -30,6 +30,11 @@ function createGrassrootsPin(node: HeritageNode, isDiscovered: boolean, isTarget
   el.appendChild(ring);
 
   if (isTarget) {
+    const targetLabel = document.createElement("span");
+    targetLabel.textContent = "★";
+    targetLabel.style.cssText = "position: absolute; top: -18px; color: #c4553a; font-size: 16px; line-height: 1; text-shadow: 0 1px 3px #fff;";
+    targetLabel.setAttribute("aria-label", "Recommended or nearest target");
+    el.appendChild(targetLabel);
     const pulse = document.createElement("div");
     pulse.style.cssText = "position: absolute; top: -7px; left: -7px; width: 50px; height: 50px; border-radius: 50%; background: #c4553a33; animation: gps-pulse 2s infinite; pointer-events: none;";
     el.appendChild(pulse);
@@ -52,11 +57,12 @@ function createUserPin(): HTMLDivElement {
   return userEl;
 }
 
-export default function RadarMap({ nodes, discoveredNodes, userPosition, targetNodeId, onNodeClick, initialCenter, initialZoom }: {
+export default function RadarMap({ nodes, discoveredNodes, userPosition, targetNodeId, focusNodeId, onNodeClick, initialCenter, initialZoom }: {
   nodes: HeritageNode[];
   discoveredNodes: string[];
   userPosition: GPSPosition | null;
   targetNodeId?: string | null;
+  focusNodeId?: string | null;
   onNodeClick: (node: HeritageNode) => void;
   initialCenter?: [number, number];
   initialZoom?: number;
@@ -65,6 +71,7 @@ export default function RadarMap({ nodes, discoveredNodes, userPosition, targetN
   const mapRef = useRef<maplibregl.Map | null>(null);
   const nodeMarkersRef = useRef<maplibregl.Marker[]>([]);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const focusedNodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -110,11 +117,17 @@ export default function RadarMap({ nodes, discoveredNodes, userPosition, targetN
       userMarkerRef.current = userPosition
         ? new maplibregl.Marker({ element: createUserPin() }).setLngLat([userPosition.lng, userPosition.lat]).addTo(map)
         : null;
-      if (userPosition) map.flyTo({ center: [userPosition.lng, userPosition.lat], zoom: Math.max(map.getZoom(), 14), duration: 700 });
+      const focusNode = focusNodeId ? nodes.find((node) => node.id === focusNodeId) : null;
+      if (focusNode && focusedNodeRef.current !== focusNodeId) {
+        map.flyTo({ center: [focusNode.lng, focusNode.lat], zoom: 15, duration: 700 });
+        focusedNodeRef.current = focusNodeId ?? null;
+      } else if (userPosition) {
+        map.flyTo({ center: [userPosition.lng, userPosition.lat], zoom: Math.max(map.getZoom(), 14), duration: 700 });
+      }
     };
     if (map.isStyleLoaded()) sync();
     else map.once("load", sync);
-  }, [nodes, discoveredNodes, userPosition, targetNodeId, onNodeClick]);
+  }, [nodes, discoveredNodes, userPosition, targetNodeId, focusNodeId, onNodeClick]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

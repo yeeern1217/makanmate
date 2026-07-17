@@ -73,6 +73,17 @@ h1, h2, h3, h4 {
   100% { background-position: 200% 0; }
 }
 
+@keyframes rarity-sparkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.96) rotate(0deg); }
+  50% { opacity: 0.9; transform: scale(1.05) rotate(8deg); }
+}
+
+@keyframes rarity-rainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @keyframes scan-line {
   0% { top: 10%; opacity: 0.2; }
   50% { opacity: 0.9; }
