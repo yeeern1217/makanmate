@@ -1,179 +1,225 @@
 # MakanMate
 
-Pokemon Go for Malaysian Street Food. A PWA that lets you discover heritage hawker stalls across Malaysia, scan menus with AI, translate them with an AR lens, cook dishes in a 3D mini-game, collect them in a Pokedex, and build Heritage Trails connecting your catches.
+**A Pokedex for Malaysian street food** — discover, scan, and collect Malaysia's living food heritage, one legendary stall at a time.
+
+MakanMate is a mobile-first PWA that gamifies heritage food discovery across Penang, KL, and Ipoh. You physically visit grassroots hawker stalls, photograph them to "catch" collectible cards, scan menus with AI vision, explore dishes through interactive 3D knowledge graphs, and build Heritage Trails that connect your catches into cultural narratives.
+
+## Why This Exists
+
+Malaysia's most important food isn't in malls or on Instagram. It's in unmarked roadside stalls run by third-generation hawkers — places with 15 online reviews that serve the best char kuey teow in the country. These stalls are invisible to Google, to food apps, and to tourists. When the uncle retires, the recipe disappears.
+
+MakanMate is built around a curated dataset of these invisible stalls. The app deliberately inverts how recommendation systems normally work: stalls with *fewer* online reviews score *higher*. We call it the Invisibility Boost — and it's the core of everything from card rarity to next-stall recommendations.
+
+**"Why not just use ChatGPT / Claude / Gemini directly?"** Because no LLM has trained on these stalls. The invisible-shop dataset — real GPS coordinates, review counts, cultural origins, grassroots/hyped classification, food tags — is the moat. The AI layer (Gemini) handles vision and storytelling, but the *intelligence about which stalls matter and why* lives in our data and algorithms, not in any foundation model.
+
+---
+
+## AI Architecture
+
+A single API route (`/api/chat`) dispatches to an orchestrator (`src/lib/orchestrator/orchestrator.ts`) that handles **7 distinct AI modes**, each with its own system prompt, Zod-validated tool schema, and structured output:
+
+### 1. Liveness Detection (`mode: "liveness"`)
+Anti-cheat system. Before a stall catch counts, Gemini analyzes the photo for signs of fakery: screen bezels, moire patterns, LCD subpixels, unnaturally flat lighting. Prevents users from photographing a Google Images result to farm cards. Defaults to `isReal: true` when uncertain — false negatives over blocking real users.
+
+### 2. Menu Vision (`mode: "vision"`)
+Extracts dishes from hawker menu photos. Decodes Malaysian shorthand (CKT → Char Kuey Teow, NL → Nasi Lemak, BKT → Bak Kut Teh). Returns structured data: raw text, English name, local name, price, decoded shorthand, and whether each dish matches a known entry in our database. Server-side Haversine GPS matching runs in parallel — no hallucination possible on location validation.
+
+### 3. Magic Lens (`mode: "magic-lens"`)
+AR-style menu translator. Returns bounding-box positions (percentage-based coordinates) for each menu item so the frontend can overlay translations, allergen icons (shellfish, peanut, gluten, dairy, egg, soy), and halal/non-halal badges directly on the camera feed.
+
+### 4. Ingredient Lore with RAG (`mode: "lore"`)
+The only mode that uses external web search. Pipeline:
+1. **Tavily web search** — queries `"{ingredient} {dish} Malaysian food culture history origin"` for real sources
+2. **Source injection** — search results are formatted and injected into the user message as context
+3. **Gemini synthesis** — generates cultural storytelling grounded in the search results, with source attribution
+4. **Graceful fallback** — if Tavily is unavailable or returns nothing, Gemini generates from its own knowledge and the response is flagged with `fallbackUsed: true`
+
+### 5. Migration Stories (`mode: "migration"`)
+Generates historically-grounded narratives about how a dish traveled to Malaysia — trade routes, immigration waves, colonial influences. Each dish entry has a `migrationStoryHint` field (e.g., "Teochew fishermen who settled along Penang's coast in the 1800s") that guides generation toward specific, verifiable history rather than generic output.
+
+### 6. Trail Narratives (`mode: "trail-narrative"`)
+Given a list of caught stalls, generates a narrative connecting them historically and culturally. Produces both a `historical_thread` (geographic and historical connections) and `cultural_connections` (diversity represented).
+
+### 7. Recommendation Phrasing (`mode: "phrase-recommendation"`)
+Takes the algorithmic recommendation output (stall name, dish, reasoning factors) and generates a natural-language suggestion in a warm, local voice. Under 30 words. This is the only mode where AI is used *after* a non-AI algorithm has already made the decision — the AI phrases, it doesn't choose.
+
+All modes use `toolChoice: "required"` with Zod schemas to force structured output. The orchestrator returns timing data (`durationMs`) and fallback flags for every call.
+
+---
+
+## Algorithmic Intelligence (No AI)
+
+These systems run entirely on the client or server with zero LLM calls:
+
+### Inverted-Ranking Recommender
+The recommendation engine deliberately inverts standard recommendation logic. Four weighted factors:
+
+| Factor | Weight | What It Does |
+|---|---|---|
+| Content Similarity | 35% | Jaccard similarity between user's food tags and stall's tags |
+| **Invisibility Boost** | **30%** | **Stalls with fewer online reviews score higher** — `1 - (reviewCount / 200)` plus a 15-point bonus for grassroots stalls |
+| Diversity Gap | 20% | Unexplored cultural origins, cities, or stall types score higher |
+| Proximity | 15% | Haversine distance from user's GPS |
+
+The system builds a `TasteProfile` from your card collection — counting affinities across cultural origins (Chinese, Malay, Indian, Peranakan, Mamak, Portuguese), cities, and stall types. It then scores every uncaptured grassroots stall and returns the top-N with human-readable reasoning explaining *why* each was recommended.
+
+### Akar Score & Rarity Classification
+Heritage scoring algorithm: `age × 30% + scarcity × 30% + base heritage score × 40%`. Scarcity is derived from `reviewCount` — again, fewer reviews = higher score. Maps to rarity tiers: Legendary (90+), Rare (75+), Uncommon (55+), Common.
+
+### Grassroots vs. Hyped Classification
+The dataset contains 12 grassroots stalls (real heritage hawkers, 15-310 reviews) and 4 "hyped" venues (mall food courts, 950-3100 reviews). Hyped stalls appear greyed out on the radar, can't be caught for cards, and are excluded from recommendations. This classification is a design choice that shapes the entire app: only grassroots stalls produce cards, earn Akar Score, and appear in trails.
+
+### Quiz Generator
+Procedurally generates quiz questions from the dish knowledge graph — testing cultural origin, origin state, dialect phrase meanings, cooking techniques, and local ingredient names. Questions pull distractors from the full dish database to ensure plausible wrong answers.
+
+### Trail Builder & Reflection
+Connects 3+ caught cards into Heritage Trails with computed metadata: cultural diversity count (out of 6 origins), rarity highlights, invisibility analysis (how many stops had <25 reviews), and total walking distance via Haversine.
+
+---
+
+## The Dataset
+
+16 heritage nodes across 3 cities, each with:
+
+| Field | Purpose |
+|---|---|
+| `isGrassroots` | Core filter — only grassroots stalls produce cards |
+| `reviewCount` | Drives Invisibility Boost and Akar Score scarcity |
+| `culturalOrigin` | One of 6 origins — drives diversity recommendations |
+| `tags` | Food category tags — drives content-based recommendations |
+| `communityCatchCount` | Simulated community data for social proof |
+| `founded` | Stall founding year — drives age factor in Akar Score |
+
+12 dish entries, each a knowledge graph with:
+- **Ingredients** with cultural lore hints, local names, and cooking hints
+- **Techniques** with tool descriptions (wok hei, sieve pressing, spice pounding)
+- **Dialect phrases** with pronunciation guides and usage context
+- **Cooking order** for the 3D cooking mini-game sequence
+- **Migration story hints** that guide AI generation toward specific history
+
+---
 
 ## Features
 
 ### Heritage Radar (`/radar`)
-Interactive GPS-enabled map showing 12 legendary grassroots stalls and 4 "hyped" mall food courts across Penang, KL, and Ipoh. Grassroots pins pulse with Akar Score; hyped pins are greyed out. Includes a proximity voice guide with 3 regional personas (Uncle Lim, Auntie Kamala, Ah Kong) that speak colloquial Malaysian English as you approach a stall.
+GPS-enabled map (MapLibre GL, no API key) showing all 16 stalls. Grassroots pins pulse with color; hyped pins are greyed out. Proximity voice guide with 3 regional personas (Uncle Lim in Penang, Auntie Kamala in KL, Ah Kong in Ipoh) that speak colloquial Malaysian English phrases as you approach a stall — using Web Speech API, no external service.
 
-### AI Menu Scanner (`/scan`)
-Point your camera at a hawker menu board and a 3-step AI pipeline kicks in:
-1. **Liveness check** — Gemini detects if you're photographing a real stall or a screen (anti-cheat)
-2. **Menu vision** — Gemini extracts dishes with English/local names, prices, and shorthand decodings
-3. **GPS matching** — Checks if you're within 200m of a heritage node
-
-On a successful catch, you receive a `CapturedCard` with rarity classification (Common / Uncommon / Rare / Legendary) and a card reveal animation. A manual dish dropdown is available as a fallback.
+### Catch Flow (`/scan`)
+3-step pipeline: liveness check → GPS proximity validation → card creation. On a successful grassroots catch, the Akar Score algorithm runs, rarity is classified, and a card reveal animation plays. After catching, the inverted-ranking recommender fires and Gemini phrases a natural-language suggestion for your next stall.
 
 ### Magic Lens (`/lens`)
-AR-style menu translator. Point your camera at a hawker menu and get an overlay with translated dish names, prices, allergen icons (shellfish, peanut, gluten, etc.), and halal/non-halal status badges, positioned at approximate locations on the camera feed.
+AR-style menu translator with positioned overlays. Allergen icons, halal/non-halal badges, translations, and prices placed at approximate bounding-box coordinates on the camera feed.
 
 ### Pokedex Collection (`/pokedex`)
-Grid display of all captured cards with tier badges (Bronze / Silver / Gold), rarity badges, creature emojis, cultural origin labels, and Akar Score points. Undiscovered dishes appear as greyed-out placeholders. Progress tracked per region.
+Card collection grid with tier badges (Bronze/Silver/Gold), rarity badges, creature emojis, cultural origin labels, and Akar Score. Undiscovered dishes appear as greyed-out placeholders.
 
 ### Heritage Blueprint (`/pokedex/[dishId]`)
-Interactive 3D knowledge graph (React Three Fiber) for each dish. A solar-system-style visualization with concentric orbital rings:
-- **Ingredients** — Tap to fetch AI-generated cultural lore, fun facts, and origin regions
-- **Cooking techniques** — Tool descriptions and methods
-- **Migration story** — How the dish traveled to Malaysia, with a "Listen" button for narration
-- **Dialect phrases** — Local pronunciations with a "Speak" button
+Interactive 3D knowledge graph (React Three Fiber) with concentric orbital rings:
+- **Ingredients** — tap for RAG-powered cultural lore with web sources
+- **Techniques** — cooking method descriptions
+- **Migration story** — AI-generated historical narrative with "Listen" narration
+- **Dialect phrases** — local pronunciations with "Speak" button
 
-Includes card evolution (Bronze → Silver → Gold) via timed quiz challenges testing knowledge of cultural origins, dialect phrases, cooking techniques, and ingredients.
+Card evolution (Bronze → Silver → Gold) via timed quiz challenges.
 
-### 3D Cooking Mini-Game
-Tap ingredients into a 3D wok in the correct cooking order. Correct picks fly into the wok with sizzle particle effects; wrong picks trigger shake feedback. Completion triggers a victory celebration with orbiting ingredients above the wok.
+### 3D Cooking Mini-Game *(built, not yet wired to a page route)*
+Components exist (`CookingScene`, `CookingHUD`, `WokModel`, `SizzleParticles`, `VictoryIngredients`) with full game logic: tap ingredients into a 3D wok in the correct `cookingOrder` sequence. Correct picks fly in with sizzle particle effects; wrong picks trigger shake feedback. All 12 dishes have cooking orders defined. Pending: a page route or entry point from the Heritage Blueprint to launch it.
 
 ### Heritage Trail (`/trail`)
-Requires 3+ caught stalls. Connects your catches into a Heritage Trail with:
-- AI-generated historical narrative tying the stalls together
-- Trail map with route lines and numbered markers
-- Cultural diversity summary across 6 origins (Malay, Chinese, Indian, Peranakan, Mamak, Portuguese)
-- Shareable trail card (PNG via html2canvas + Web Share API)
+Connects 3+ catches into a trail with AI-generated narrative, trail map with route lines, cultural diversity summary, and shareable PNG card (html-to-image + Web Share API).
 
-### Akar Score & Rarity System
-Heritage scoring algorithm combining stall age (30%), scarcity (30%), and base heritage score (40%). Scores map to rarity tiers: Legendary (90+), Rare (75+), Uncommon (55+), Common.
-
-### Voice Guide
-Browser-native speech synthesis (Web Speech API) with 3 culturally authentic personas that provide proximity feedback, narrate migration stories, and speak dialect phrases. No external API required.
+---
 
 ## Tech Stack
 
-- Next.js 16 (App Router) + React 19 + TypeScript
-- Tailwind CSS v4
-- React Three Fiber + drei (3D scenes and cooking game)
-- MapLibre GL JS (maps, no API key needed)
-- Google Gemini 2.5 Flash via Vercel AI SDK (6 AI modes)
-- Zustand (state management with localStorage persistence)
-- html2canvas (shareable trail cards)
-- Web Speech API (voice guide and narration)
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
+| AI | Google Gemini via Vercel AI SDK (7 modes) |
+| Search/RAG | Tavily API (ingredient lore grounding) |
+| 3D | React Three Fiber + drei |
+| Maps | MapLibre GL JS + CARTO (free, no API key) |
+| Voice | Web Speech API (browser-native, no external service) |
+| State | Zustand with localStorage persistence |
+| Styling | Tailwind CSS v4 |
+| Sharing | html-to-image + Web Share API |
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-
 - Node.js 18+
-- A Google AI API key (for menu scanning, lore generation, magic lens, and trail narratives)
+- Google AI API key (for menu scanning, lore, magic lens, trail narratives)
+- Tavily API key (optional — ingredient lore falls back gracefully without it)
 
 ### Setup
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/yeeern1217/makanmate.git
-   cd makanmate
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-   The `--legacy-peer-deps` flag is required due to React 19 peer dependency conflicts.
-
-3. Create a `.env.local` file in the project root:
-   ```
-   GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key_here
-   ```
-   Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
-
-4. Start the dev server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Testing Locally
-
-Since MakanMate relies on GPS and camera, here's how to test each feature on localhost:
-
-#### Mock GPS (recommended for local testing)
-
-Add these to your `.env.local` to skip real GPS and simulate being near a heritage stall:
-
+```bash
+git clone https://github.com/yeeern1217/makanmate.git
+cd makanmate
+npm install --legacy-peer-deps
 ```
-NEXT_PUBLIC_MOCK_GPS=true
-NEXT_PUBLIC_MOCK_GPS_LAT=5.4141
+
+Create `.env.local`:
+```
+GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
+TAVILY_API_KEY=your_key_here          # optional
+NEXT_PUBLIC_MOCK_GPS=true              # for local testing
+NEXT_PUBLIC_MOCK_GPS_LAT=5.4141        # Penang
 NEXT_PUBLIC_MOCK_GPS_LNG=100.3288
 ```
 
-This places you at **New Lane Char Kuey Teow** in Penang. Other coordinates to try:
+```bash
+npm run dev
+```
+
+### Mock GPS Coordinates
 
 | Stall | Lat | Lng |
 |---|---|---|
 | New Lane Char Kuey Teow (Penang) | 5.4141 | 100.3288 |
 | Lorong Selamat Cendol (Penang) | 5.4220 | 100.3310 |
-| Nasi Kandar Line Clear (Penang) | 5.4185 | 100.3365 |
+| Petaling Street BKT (KL) | 3.1438 | 101.6953 |
 
-#### Camera
-
-- **Desktop**: Chrome DevTools → More tools → Sensors → select a camera. Or use a real webcam.
-- **Mobile on same network**: Run `npm run dev -- --hostname 0.0.0.0`, then open `http://<your-local-ip>:3000` on your phone. Camera APIs require HTTPS in production but work on `localhost`.
-- **No camera**: Use the manual dish dropdown fallback on the Catch page.
-
-#### Feature-by-Feature Testing Guide
-
-1. **Home (`/`)** — Loads immediately. Check the typewriter animation and animated counters.
-
-2. **Radar (`/radar`)** — With mock GPS enabled, the map centers on your mock position. Tap a grassroots pin (coloured circle) to open the stall details sheet. Tap "Catch This Stall" to go to the scanner.
-
-3. **Catch (`/scan`)** — With a camera, photograph any food menu or hawker stall image. The AI pipeline runs: liveness → menu vision → GPS match. Without a camera, use the manual dropdown to select a dish. After catching, watch the card reveal animation.
-
-4. **Pokedex (`/pokedex`)** — View your collected cards. Tap a card to enter the Heritage Blueprint.
-
-5. **Heritage Blueprint (`/pokedex/[dishId]`)** — Interact with the 3D orbital view. Tap ingredient/technique/migration/dialect nodes to fetch AI content. Try the "Evolve" button to take a quiz (needs a caught card).
-
-6. **Cooking Game** — Accessible from the Heritage Blueprint. Tap ingredients in the correct order into the wok.
-
-7. **Magic Lens (`/lens`)** — Point camera at any food menu image. The AR overlay appears with translations, allergens, and halal status.
-
-8. **Heritage Trail (`/trail`)** — Requires 3+ caught cards. Build a trail and view the AI-generated narrative. Test the "Share Trail Card" button.
-
-9. **Voice Guide** — On the Radar page, approach a stall (or set mock GPS near one). The proximity guide speaks colloquial phrases. Also test the "Listen" / "Speak" buttons in the Heritage Blueprint.
-
-#### Chrome DevTools Mobile Emulation
-
-For the best experience, open DevTools (F12) → toggle device toolbar → select a mobile device (e.g., iPhone 14 Pro). The app is designed as a mobile-first PWA.
+---
 
 ## Project Structure
 
 ```
 src/
-  app/                  # Next.js pages
-    api/chat/           #   Single API route (6 Gemini modes)
-    radar/              #   Heritage map
-    scan/               #   Camera catch flow
-    pokedex/            #   Collection + [dishId] blueprint
-    trail/              #   Heritage trail builder
-    lens/               #   AR menu translator
-    offline/            #   Offline fallback
-  components/
-    blueprint/          #   3D blueprint nodes + detail overlay
-    catch/              #   Card reveal animation + stall card
-    evolve/             #   Card evolution + quiz challenge
-    lens/               #   Magic lens AR overlay
-    map/                #   MapLibre radar + proximity guide
-    nav/                #   Bottom navigation bar
-    pokedex/            #   3D dish viewer, cooking game, collection
-    scan/               #   Camera, capture button, results
-    trail/              #   Trail map, diversity summary, share card
-    ui/                 #   Shared UI (bottom sheet, buttons, toast)
+  app/
+    api/chat/            Single API route → orchestrator (7 Gemini modes)
+    radar/               Heritage map with GPS + voice guide
+    scan/                Camera catch flow (liveness → vision → GPS → card)
+    pokedex/             Collection grid + [dishId] 3D blueprint
+    trail/               Heritage trail builder
+    lens/                AR menu translator
+    offline/             PWA offline fallback
   lib/
-    ai/                 #   Gemini prompts and Zod tool schemas
-    data/               #   Heritage nodes, dish entries, regions, creatures
-    quiz/               #   Quiz question generator
-    scoring/            #   Akar Score algorithm + rarity classifier
-    share/              #   html2canvas share image generator
-    trails/             #   Trail builder logic
-    voice/              #   Voice personas + speech synthesis wrapper
-  store/                # Zustand stores (app state, cards, pokedex)
-  types/                # TypeScript interfaces
+    orchestrator/        Central AI dispatcher with mode routing
+    ai/                  System prompts (7) + Zod tool schemas (8)
+    recommender/         Inverted-ranking engine + taste profiling
+    scoring/             Akar Score algorithm + rarity classifier
+    search/              Tavily web search integration (RAG)
+    data/                16 heritage nodes + 12 dish knowledge graphs
+    quiz/                Procedural quiz generator from dish data
+    trails/              Trail builder + reflection generator
+    voice/               3 regional personas + speech synthesis
+    camera.ts            getUserMedia + base64 capture
+    gps.ts               Geolocation wrapper + mock GPS
+    geo.ts               Haversine distance + nearest-node finder
+  store/                 Zustand (app state, cards, pokedex)
+  types/                 TypeScript interfaces
+  components/
+    blueprint/           3D orbital knowledge graph nodes
+    catch/               Card reveal animation + recommendation card
+    evolve/              Card evolution + quiz challenge
+    lens/                Magic lens AR overlay
+    map/                 MapLibre radar + proximity voice guide
+    pokedex/             3D dish viewer, cooking game, collection grid
+    scan/                Camera viewport, capture button, results
+    trail/               Trail map, diversity summary, share card
+    nav/                 Bottom navigation bar
+    ui/                  Shared UI components
 ```

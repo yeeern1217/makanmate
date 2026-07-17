@@ -72,11 +72,7 @@ export default function ScanPage() {
   useEffect(() => {
     if (!showRecommendation) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        phraseAbortRef.current?.abort();
-        setPhrasedSuggestion(null);
-        setShowRecommendation(false);
-      }
+      if (e.key === "Escape") dismissRecommendation();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -164,6 +160,7 @@ export default function ScanPage() {
 
   const handleCatchComplete = () => {
     setShowCatchAnim(false);
+    setStage("menu");
 
     try {
       const profile = buildTasteProfile(cards, HERITAGE_NODES);
@@ -171,7 +168,6 @@ export default function ScanPage() {
       if (recs.length > 0) {
         const rec = recs[0];
         setRecommendation(rec);
-        setShowRecommendation(true);
         phraseAbortRef.current?.abort();
         const controller = new AbortController();
         phraseAbortRef.current = controller;
@@ -193,8 +189,6 @@ export default function ScanPage() {
     } catch (err) {
       console.error("Recommendation failed:", err);
     }
-
-    setStage("menu");
   };
 
   const handleMenuCapture = async () => {
@@ -228,10 +222,25 @@ export default function ScanPage() {
     }
   };
 
-  const handleFinish = () => {
+  const navigateToPokedex = () => {
     const dishId = catchCard?.dishId;
     if (dishId) router.push(`/pokedex/${dishId}`);
     else router.push("/pokedex");
+  };
+
+  const dismissRecommendation = () => {
+    phraseAbortRef.current?.abort();
+    setPhrasedSuggestion(null);
+    setShowRecommendation(false);
+    navigateToPokedex();
+  };
+
+  const handleFinish = () => {
+    if (recommendation) {
+      setShowRecommendation(true);
+    } else {
+      navigateToPokedex();
+    }
   };
 
   const capture = stage === "stall" ? handleStallCapture : handleMenuCapture;
@@ -281,11 +290,7 @@ export default function ScanPage() {
           <RecommendationCard
             recommendation={recommendation}
             phrasedSuggestion={phrasedSuggestion}
-            onDismiss={() => {
-              phraseAbortRef.current?.abort();
-              setPhrasedSuggestion(null);
-              setShowRecommendation(false);
-            }}
+            onDismiss={dismissRecommendation}
             onNavigate={() => {
               setShowRecommendation(false);
               router.push(`/radar?highlight=${recommendation.node.id}`);
