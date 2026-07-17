@@ -59,6 +59,24 @@ export function buildTrail(
   };
 }
 
+export function resolveTrailForCards(
+  trail: HeritageTrail,
+  cards: CapturedCard[]
+): HeritageTrail {
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const resolvedCards = trail.cardIds
+    .map((cardId) => cardById.get(cardId))
+    .filter(Boolean) as CapturedCard[];
+  const trailCards = resolvedCards.length > 0 ? resolvedCards : cards.slice(0, Math.min(cards.length, 8));
+
+  return {
+    ...trail,
+    cardIds: trailCards.map((card) => card.id),
+    culturalDiversity: [...new Set(trailCards.map((card) => card.culturalOrigin))] as CulturalOrigin[],
+    totalAkarScore: trailCards.reduce((sum, card) => sum + card.akarScore, 0),
+  };
+}
+
 export interface TrailStop {
   cardId: string;
   stallId: string;

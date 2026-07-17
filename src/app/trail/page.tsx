@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCardStore } from "@/store/useCardStore";
@@ -9,6 +9,7 @@ import {
   getTrailStops,
   getStallNamesForNarrative,
   buildTrailReflection,
+  resolveTrailForCards,
 } from "@/lib/trails/trail-builder";
 import type { HeritageTrail } from "@/types/card";
 import DiversitySummary from "@/components/trail/DiversitySummary";
@@ -34,15 +35,29 @@ export default function TrailPage() {
   const updateTrail = useCardStore((s) => s.updateTrail);
   const heritageUnlocked = useCardStore((s) => s.getHeritageUnlockedTotal());
   const akarTotal = useCardStore((s) => s.getAkarScoreTotal());
+  const [mounted, setMounted] = useState(false);
 
-  const [activeTrail, setActiveTrail] = useState<HeritageTrail | null>(
-    trails.length > 0 ? trails[trails.length - 1] : null
-  );
+  const [activeTrail, setActiveTrail] = useState<HeritageTrail | null>(null);
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [sharing, setSharing] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const canBuild = canBuildTrail(cards, trails);
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (mounted && !activeTrail && trails.length > 0) {
+      setActiveTrail(trails[trails.length - 1]);
+    }
+  }, [mounted, activeTrail, trails]);
+
+  const canBuild = mounted ? canBuildTrail(cards, trails) : false;
+  const displayCards = mounted ? cards : [];
+  const displayAkarTotal = mounted ? akarTotal : 0;
+  const displayHeritageUnlocked = mounted ? heritageUnlocked : 0;
+  const resolvedActiveTrail = useMemo(
+    () => (mounted && activeTrail ? resolveTrailForCards(activeTrail, cards) : null),
+    [mounted, activeTrail, cards]
+  );
 
   const handleBuildTrail = useCallback(async () => {
     const trail = buildTrail(cards, trails);
@@ -86,12 +101,12 @@ export default function TrailPage() {
   };
 
   const stops = useMemo(
-    () => (activeTrail ? getTrailStops(activeTrail, cards) : []),
-    [activeTrail, cards]
+    () => (resolvedActiveTrail ? getTrailStops(resolvedActiveTrail, cards) : []),
+    [resolvedActiveTrail, cards]
   );
   const reflection = useMemo(
-    () => (activeTrail ? buildTrailReflection(activeTrail, cards) : undefined),
-    [activeTrail, cards]
+    () => (resolvedActiveTrail ? buildTrailReflection(resolvedActiveTrail, cards) : undefined),
+    [resolvedActiveTrail, cards]
   );
 
   return (
@@ -100,17 +115,17 @@ export default function TrailPage() {
       <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm">
         <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Trail</h1>
         <div className="flex gap-3 text-xs">
-          <span className="font-bold text-[var(--accent-secondary)]">{akarTotal}</span>
+          <span className="font-bold text-[var(--accent-secondary)]">{displayAkarTotal}</span>
           <span className="text-[var(--text-muted)]">Akar</span>
           <span className="text-[var(--text-muted)]">|</span>
-          <span className="font-bold text-[var(--accent-secondary)]">{heritageUnlocked}</span>
+          <span className="font-bold text-[var(--accent-secondary)]">{displayHeritageUnlocked}</span>
           <span className="text-[var(--text-muted)]">Unlocked</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
         {/* No cards state */}
-        {cards.length === 0 && (
+        {mounted && displayCards.length === 0 && (
           <div className="flex flex-col items-center justify-center px-6 py-14 text-center animate-fade-in">
             {/* Animated trail on a map — 3 stops along a winding route */}
             <div className="relative mx-auto mb-8 h-56 w-full max-w-[23rem] overflow-hidden rounded-2xl border-2 border-[var(--border)]/60 bg-[var(--surface)]/60 shadow-inner">
@@ -214,23 +229,23 @@ export default function TrailPage() {
         )}
 
         {/* Not enough cards */}
-        {cards.length > 0 && cards.length < 3 && !activeTrail && (
+        {mounted && displayCards.length > 0 && displayCards.length < 3 && !activeTrail && (
           <div className="retro-card p-4 text-center space-y-2">
             <p className="text-sm font-bold">Keep catching!</p>
             <p className="text-xs text-[var(--text-muted)]">
-              You have {cards.length}/3 cards. Catch {3 - cards.length} more to build a trail.
+              You have {displayCards.length}/3 cards. Catch {3 - displayCards.length} more to build a trail.
             </p>
             <div className="h-1.5 rounded-full bg-[var(--surface-dark)] overflow-hidden">
               <div
                 className="h-full rounded-full bg-[var(--accent-secondary)] transition-all"
-                style={{ width: `${(cards.length / 3) * 100}%` }}
+                style={{ width: `${(displayCards.length / 3) * 100}%` }}
               />
             </div>
           </div>
         )}
 
         {/* Build trail button */}
-        {canBuild && !activeTrail && (
+        {mounted && canBuild && !activeTrail && (
           <div className="text-center">
             <button
               onClick={handleBuildTrail}
@@ -243,7 +258,7 @@ export default function TrailPage() {
         )}
 
         {/* Active trail display */}
-        {activeTrail && (
+        {resolvedActiveTrail && (
           <>
             {/* Trail map — fills the screen down to the bottom nav.
                 Height = viewport - header (~3.5rem) - bottom nav (72px).
@@ -253,20 +268,20 @@ export default function TrailPage() {
               <div className="relative -mx-4 -mt-4 h-[calc(100dvh-3.5rem-72px)] min-h-[320px] border-b-2 border-[var(--border)]">
                 <TrailMap stops={stops} />
                 <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-1 shadow-sm backdrop-blur-sm">
-                  <span className="text-xs font-bold text-[var(--foreground)]">{activeTrail.name}</span>
+                  <span className="text-xs font-bold text-[var(--foreground)]">{resolvedActiveTrail.name}</span>
                 </div>
               </div>
             ) : (
-              <h2 className="text-sm font-bold text-center">{activeTrail.name}</h2>
+              <h2 className="text-sm font-bold text-center">{resolvedActiveTrail.name}</h2>
             )}
 
             {/* Historical thread */}
             {loadingNarrative && <LoadingPulse text="Weaving the historical thread..." />}
-            {activeTrail.historicalThread && (
+            {resolvedActiveTrail.historicalThread && (
               <div className="retro-card p-4">
                 <h3 className="text-xs font-bold text-[var(--accent-secondary)] mb-1">Historical Thread</h3>
                 <p className="text-xs leading-relaxed text-[var(--foreground)] italic">
-                  &ldquo;{activeTrail.historicalThread}&rdquo;
+                  &ldquo;{resolvedActiveTrail.historicalThread}&rdquo;
                 </p>
               </div>
             )}
@@ -307,8 +322,8 @@ export default function TrailPage() {
 
             {/* Diversity summary */}
             <DiversitySummary
-              origins={activeTrail.culturalDiversity}
-              totalAkar={activeTrail.totalAkarScore}
+              origins={resolvedActiveTrail.culturalDiversity}
+              totalAkar={resolvedActiveTrail.totalAkarScore}
               totalCards={stops.length}
               reflection={reflection}
             />
@@ -326,7 +341,7 @@ export default function TrailPage() {
 
             {/* Shareable card (hidden, used for screenshot) */}
             <div className="overflow-hidden" style={{ height: 0 }}>
-              <ShareableCard ref={shareRef} trail={activeTrail} stops={stops} />
+              <ShareableCard ref={shareRef} trail={resolvedActiveTrail} stops={stops} />
             </div>
 
             {/* Past trails */}
@@ -334,7 +349,7 @@ export default function TrailPage() {
               <div className="space-y-2 pt-2">
                 <h3 className="text-xs font-bold text-[var(--text-muted)]">Past Trails</h3>
                 {trails
-                  .filter((t) => t.id !== activeTrail.id)
+                  .filter((t) => t.id !== resolvedActiveTrail.id)
                   .reverse()
                   .map((trail) => (
                     <button
