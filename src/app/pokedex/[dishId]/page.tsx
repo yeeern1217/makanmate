@@ -178,7 +178,7 @@ export default function PokedexPage() {
         <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Blueprint</h1>
         <div className="text-right">
           <p className="text-[10px] text-[var(--text-muted)]">Heritage Unlocked</p>
-          <p className="text-sm font-bold text-[var(--accent-secondary)]">{heritageUnlocked}</p>
+          <p className="text-sm font-bold text-[var(--accent-secondary)]" suppressHydrationWarning>{heritageUnlocked}</p>
         </div>
       </div>
 

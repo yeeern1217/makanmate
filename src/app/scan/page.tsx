@@ -258,7 +258,7 @@ export default function ScanPage() {
               <div className="relative">
                 <span
                   aria-hidden
-                  className="absolute inset-0 rounded-full bg-[var(--accent-primary)] blur-md animate-glow-pulse"
+                  className="absolute inset-0 rounded-full bg-[var(--accent-primary)] blur-md animate-glow-pulse pointer-events-none"
                 />
                 <CaptureButton onClick={capture} disabled={scanning} label={captureLabel} />
               </div>

@@ -1,15 +1,10 @@
 export async function shareTrailCard(element: HTMLElement): Promise<void> {
   try {
-    const html2canvas = (await import("html2canvas")).default;
-    const canvas = await html2canvas(element, {
+    const { toBlob } = await import("html-to-image");
+    const blob = await toBlob(element, {
       backgroundColor: "#faf3e0",
-      scale: 2,
-      useCORS: true,
+      pixelRatio: 2,
     });
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/png")
-    );
 
     if (!blob) throw new Error("Failed to generate image");
 
