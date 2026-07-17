@@ -8,6 +8,7 @@ import {
   buildTrail,
   getTrailStops,
   getStallNamesForNarrative,
+  buildTrailReflection,
 } from "@/lib/trails/trail-builder";
 import type { HeritageTrail } from "@/types/card";
 import DiversitySummary from "@/components/trail/DiversitySummary";
@@ -78,6 +79,7 @@ export default function TrailPage() {
   };
 
   const stops = activeTrail ? getTrailStops(activeTrail, cards) : [];
+  const reflection = activeTrail ? buildTrailReflection(activeTrail, cards) : undefined;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -285,6 +287,7 @@ export default function TrailPage() {
               origins={activeTrail.culturalDiversity}
               totalAkar={activeTrail.totalAkarScore}
               totalCards={stops.length}
+              reflection={reflection}
             />
 
             {/* Share button */}
