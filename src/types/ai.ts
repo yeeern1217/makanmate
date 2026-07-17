@@ -2,7 +2,7 @@ export interface ChatRequest {
   image?: string;
   lat?: number;
   lng?: number;
-  mode: "vision" | "lore";
+  mode: "vision" | "lore" | "magic-lens" | "migration" | "trail-narrative";
   ingredient?: string;
   dish?: string;
   lore_hint?: string;

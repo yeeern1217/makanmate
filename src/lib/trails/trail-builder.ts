@@ -1,5 +1,9 @@
 import type { CapturedCard, HeritageTrail, CulturalOrigin } from "@/types/card";
+import type { HeritageNode } from "@/types/heritage";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
+
+const ALL_ORIGINS: CulturalOrigin[] = ["Malay", "Chinese", "Indian", "Peranakan", "Mamak", "Portuguese"];
+const TOTAL_ORIGINS = ALL_ORIGINS.length;
 
 const MIN_CARDS_FOR_TRAIL = 3;
 
@@ -92,4 +96,77 @@ export function getTrailStops(trail: HeritageTrail, cards: CapturedCard[]): Trai
 export function getStallNamesForNarrative(trail: HeritageTrail, cards: CapturedCard[]): string {
   const stops = getTrailStops(trail, cards);
   return stops.map((s) => `${s.stallName} (${s.dishName}, ${s.culturalOrigin})`).join(", ");
+}
+
+export interface TrailReflection {
+  diversityStatement: string;
+  rarityHighlight: string;
+  invisibilityNote: string;
+  totalDistanceKm: number;
+}
+
+export function buildTrailReflection(
+  trail: HeritageTrail,
+  cards: CapturedCard[]
+): TrailReflection {
+  const trailCards = trail.cardIds
+    .map((id) => cards.find((c) => c.id === id))
+    .filter(Boolean) as CapturedCard[];
+
+  if (trailCards.length === 0) {
+    return {
+      diversityStatement: "No cards found for this trail.",
+      rarityHighlight: "",
+      invisibilityNote: "",
+      totalDistanceKm: 0,
+    };
+  }
+
+  const nodeById = new Map(HERITAGE_NODES.map((n) => [n.id, n]));
+
+  // Diversity
+  const uniqueOrigins = [...new Set(trailCards.map((c) => c.culturalOrigin))];
+  const diversityStatement =
+    uniqueOrigins.length === 0
+      ? "No cultural traditions resolved for this trail."
+      : uniqueOrigins.length >= 4
+      ? `Incredible — you explored ${uniqueOrigins.length} out of ${TOTAL_ORIGINS} cultural traditions: ${uniqueOrigins.join(", ")}`
+      : `You explored ${uniqueOrigins.length} cultural tradition${uniqueOrigins.length > 1 ? "s" : ""}: ${uniqueOrigins.join(", ")}`;
+
+  // Rarity
+  const rarestCard = trailCards.reduce(
+    (best, c) => (c.akarScore > best.akarScore ? c : best),
+    trailCards[0]
+  );
+  const rarestNode = nodeById.get(rarestCard.stallId);
+  const rarityHighlight = rarestNode
+    ? `Your rarest catch: ${rarestNode.name} (${rarestCard.rarity}, Akar Score ${rarestCard.akarScore})`
+    : `Your highest Akar Score: ${rarestCard.akarScore}`;
+
+  // Invisibility — count stalls with < 25 reviews
+  const hiddenCount = trailCards.filter((c) => {
+    const node = nodeById.get(c.stallId);
+    return node && node.reviewCount < 25;
+  }).length;
+  const invisibilityNote =
+    hiddenCount > 0
+      ? `${hiddenCount} of your ${trailCards.length} stops had fewer than 25 online reviews — true hidden gems`
+      : `Your trail featured well-known heritage stalls`;
+
+  // Total distance using the existing haversine function in this file
+  const trailStops = trailCards
+    .map((c) => nodeById.get(c.stallId))
+    .filter(Boolean) as HeritageNode[];
+  let totalDist = 0;
+  for (let i = 1; i < trailStops.length; i++) {
+    totalDist += haversine(
+      trailStops[i - 1].lat,
+      trailStops[i - 1].lng,
+      trailStops[i].lat,
+      trailStops[i].lng
+    );
+  }
+  const totalDistanceKm = Math.round((totalDist / 1000) * 10) / 10;
+
+  return { diversityStatement, rarityHighlight, invisibilityNote, totalDistanceKm };
 }

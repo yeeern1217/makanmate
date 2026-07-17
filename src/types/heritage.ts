@@ -18,6 +18,7 @@ export interface HeritageNode {
   reviewCount: number;
   isGrassroots: boolean;
   communityCatchCount: number;
+  tags: string[];
 }
 
 export interface IngredientNode {

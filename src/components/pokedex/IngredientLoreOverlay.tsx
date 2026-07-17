@@ -41,6 +41,24 @@ export default function IngredientLoreOverlay({
             <p className="text-sm text-gray-300">{lore.fun_fact}</p>
           </div>
           <p className="text-xs text-gray-500">Origin: {lore.origin_region}</p>
+          {lore.sources && lore.sources.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-[var(--border)]">
+              <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Sources</p>
+              <div className="space-y-0.5">
+                {lore.sources.map((s: { title: string; url: string }, i: number) => (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-[10px] text-[var(--accent-primary)] hover:underline truncate"
+                  >
+                    {s.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-sm text-gray-500">Could not load lore. Try again.</p>

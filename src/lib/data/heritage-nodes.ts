@@ -17,6 +17,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 28,
     isGrassroots: true,
     communityCatchCount: 147,
+    tags: ["noodle", "wok-hei", "seafood", "egg", "savory-umami"],
   },
   {
     id: "lorong-selamat-cendol",
@@ -34,6 +35,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 42,
     isGrassroots: true,
     communityCatchCount: 89,
+    tags: ["dessert", "sweet", "vegetarian-ok"],
   },
   {
     id: "gurney-drive-laksa",
@@ -51,6 +53,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 65,
     isGrassroots: true,
     communityCatchCount: 112,
+    tags: ["noodle", "seafood", "sour", "spicy", "savory-umami"],
   },
   {
     id: "oh-chien-heritage",
@@ -68,6 +71,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 19,
     isGrassroots: true,
     communityCatchCount: 53,
+    tags: ["seafood", "egg", "deep-fried", "savory-umami"],
   },
   {
     id: "petaling-street-bkt",
@@ -85,6 +89,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 55,
     isGrassroots: true,
     communityCatchCount: 98,
+    tags: ["pork", "herbal", "braised", "savory-umami"],
   },
   {
     id: "bangsar-roti-canai",
@@ -101,6 +106,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 120,
     isGrassroots: true,
     communityCatchCount: 201,
+    tags: ["flatbread", "deep-fried", "savory-umami", "vegetarian-ok"],
   },
   {
     id: "village-park-nasi-lemak",
@@ -118,6 +124,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 310,
     isGrassroots: true,
     communityCatchCount: 178,
+    tags: ["rice", "chicken", "deep-fried", "spicy", "savory-umami"],
   },
   {
     id: "fatty-crab-duck-rice",
@@ -135,6 +142,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 38,
     isGrassroots: true,
     communityCatchCount: 64,
+    tags: ["duck", "rice", "braised", "savory-umami"],
   },
   {
     id: "onn-kee-chicken",
@@ -152,6 +160,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 22,
     isGrassroots: true,
     communityCatchCount: 134,
+    tags: ["chicken", "steamed", "savory-umami"],
   },
   {
     id: "foh-san-hor-fun",
@@ -169,6 +178,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 31,
     isGrassroots: true,
     communityCatchCount: 87,
+    tags: ["noodle", "seafood", "chicken", "savory-umami"],
   },
   {
     id: "foh-san-dim-sum",
@@ -186,6 +196,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 85,
     isGrassroots: true,
     communityCatchCount: 156,
+    tags: ["pork", "seafood", "steamed", "savory-umami"],
   },
   {
     id: "sin-yoon-loong-egg-tart",
@@ -203,6 +214,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 15,
     isGrassroots: true,
     communityCatchCount: 42,
+    tags: ["pastry", "egg", "sweet"],
   },
   // Hyped pins — malls and chains for visual contrast
   {
@@ -220,6 +232,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 2400,
     isGrassroots: false,
     communityCatchCount: 0,
+    tags: [],
   },
   {
     id: "hyped-lot10-hutong",
@@ -236,6 +249,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 1800,
     isGrassroots: false,
     communityCatchCount: 0,
+    tags: [],
   },
   {
     id: "hyped-gurney-plaza-food",
@@ -252,6 +266,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 3100,
     isGrassroots: false,
     communityCatchCount: 0,
+    tags: [],
   },
   {
     id: "hyped-ipoh-parade-food",
@@ -268,6 +283,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 950,
     isGrassroots: false,
     communityCatchCount: 0,
+    tags: [],
   },
   {
     id: "hyped-sunway-pyramid",

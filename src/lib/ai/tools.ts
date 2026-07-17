@@ -1,11 +1,5 @@
 import { z } from "zod";
 
-export const livenessCheckSchema = z.object({
-  isReal: z.boolean(),
-  confidence: z.number().min(0).max(1),
-  reason: z.string(),
-});
-
 export const parseMenuSchema = z.object({
   dishes: z.array(z.object({
     raw_text: z.string(),
@@ -34,6 +28,10 @@ export const getIngredientLoreSchema = z.object({
   lore_text: z.string(),
   fun_fact: z.string(),
   origin_region: z.string(),
+  sources: z.array(z.object({
+    title: z.string(),
+    url: z.string().url(),
+  })).optional(),
 });
 
 export const magicLensSchema = z.object({
@@ -64,4 +62,8 @@ export const migrationStorySchema = z.object({
 export const trailNarrativeSchema = z.object({
   historical_thread: z.string(),
   cultural_connections: z.string(),
+});
+
+export const phraseRecommendationSchema = z.object({
+  suggestion: z.string(),
 });

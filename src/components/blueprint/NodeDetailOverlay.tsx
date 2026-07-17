@@ -47,7 +47,7 @@ export default function NodeDetailOverlay({
           </button>
         </div>
 
-        <div className="px-4 pb-4 max-h-[40vh] overflow-y-auto">
+        <div className="px-4 pb-4 max-h-[42vh] overflow-y-auto">
           {node.kind === "ingredient" && <IngredientDetail node={node} />}
           {node.kind === "technique" && <TechniqueDetail data={node.data} />}
           {node.kind === "migration" && (

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { captureFrameAsBase64 } from "@/lib/camera";
 import { getCurrentPosition } from "@/lib/gps";
@@ -8,6 +8,9 @@ import { useAppStore } from "@/store/useAppStore";
 import { useCardStore } from "@/store/useCardStore";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import { computeAkarScore, classifyRarity } from "@/lib/scoring/akar-score";
+import { buildTasteProfile } from "@/lib/recommender/taste-profile";
+import { getTopRecommendations } from "@/lib/recommender/recommend";
+import type { ScoredRecommendation } from "@/lib/recommender/types";
 import { ParsedDish } from "@/types/ai";
 import CameraViewport from "@/components/scan/CameraViewport";
 import CaptureButton from "@/components/scan/CaptureButton";
@@ -16,6 +19,7 @@ import ManualDishDropdown from "@/components/scan/ManualDishDropdown";
 import ToastNotification from "@/components/ui/ToastNotification";
 import LoadingPulse from "@/components/ui/LoadingPulse";
 import CatchAnimation from "@/components/catch/CatchAnimation";
+import RecommendationCard from "@/components/catch/RecommendationCard";
 import type { CapturedCard } from "@/types/card";
 
 type Stage = "stall" | "menu";
@@ -51,12 +55,28 @@ export default function ScanPage() {
   const [catchCard, setCatchCard] = useState<CapturedCard | null>(null);
   const [showCatchAnim, setShowCatchAnim] = useState(false);
   const [stallImage, setStallImage] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<ScoredRecommendation | null>(null);
+  const [phrasedSuggestion, setPhrasedSuggestion] = useState<string | null>(null);
+  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [userLat, setUserLat] = useState<number | undefined>(undefined);
+  const [userLng, setUserLng] = useState<number | undefined>(undefined);
   const addDiscoveredNode = useAppStore((s) => s.addDiscoveredNode);
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const addCard = useCardStore((s) => s.addCard);
+  const cards = useCardStore((s) => s.cards);
+  const phraseAbortRef = useRef<AbortController | null>(null);
 
   const onCameraStream = useCallback(() => setCameraReady(true), []);
   const onCameraError = useCallback(() => setCameraError(true), []);
+
+  useEffect(() => {
+    if (!showRecommendation) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissRecommendation();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [showRecommendation]);
 
   const handleStallCapture = async () => {
     if (scanning) return;
@@ -69,6 +89,8 @@ export default function ScanPage() {
     let pos;
     try {
       pos = await getCurrentPosition();
+      setUserLat(pos.lat);
+      setUserLng(pos.lng);
     } catch {
       setToast("Turn on GPS — we need your location to confirm the stall.");
       setScanning(false);
@@ -76,19 +98,6 @@ export default function ScanPage() {
     }
 
     try {
-      const livenessRes = await fetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({ image, mode: "liveness" }),
-        headers: { "Content-Type": "application/json" },
-      });
-      const livenessData = await livenessRes.json();
-      const liv = livenessData.result;
-      if (liv && !liv.isReal && liv.confidence > 0.7) {
-        setToast("That looks like a screen — find the real stall!");
-        setScanning(false);
-        return;
-      }
-
       const nearest = findNearestHeritageNode(HERITAGE_NODES, pos.lat, pos.lng);
       if (!nearest || nearest.distanceMeters > HERITAGE_CATCH_RADIUS_M) {
         const where = nearest
@@ -139,6 +148,35 @@ export default function ScanPage() {
   const handleCatchComplete = () => {
     setShowCatchAnim(false);
     setStage("menu");
+
+    try {
+      const profile = buildTasteProfile(cards, HERITAGE_NODES);
+      const recs = getTopRecommendations(profile, HERITAGE_NODES, 1, userLat, userLng);
+      if (recs.length > 0) {
+        const rec = recs[0];
+        setRecommendation(rec);
+        setShowRecommendation(true);
+        phraseAbortRef.current?.abort();
+        const controller = new AbortController();
+        phraseAbortRef.current = controller;
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "phrase-recommendation",
+            stallName: rec.node.name,
+            dishName: rec.node.signature_dish,
+            reasoning: rec.reasoning,
+          }),
+          signal: controller.signal,
+        })
+          .then((res) => res.json())
+          .then((data) => setPhrasedSuggestion(data.result?.suggestion ?? null))
+          .catch((err) => { if (err.name !== "AbortError") setPhrasedSuggestion(null); });
+      }
+    } catch (err) {
+      console.error("Recommendation failed:", err);
+    }
   };
 
   const handleMenuCapture = async () => {
@@ -155,7 +193,7 @@ export default function ScanPage() {
         headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
-      const found: ParsedDish[] = data.menu?.dishes ?? [];
+      const found: ParsedDish[] = data.result?.menu?.dishes ?? [];
       setDishes(found);
 
       const stallId = catchCard?.stallId;
@@ -172,10 +210,24 @@ export default function ScanPage() {
     }
   };
 
-  const handleFinish = () => {
+  const navigateToPokedex = () => {
     const dishId = catchCard?.dishId;
     if (dishId) router.push(`/pokedex/${dishId}`);
     else router.push("/pokedex");
+  };
+
+  const dismissRecommendation = () => {
+    phraseAbortRef.current?.abort();
+    setPhrasedSuggestion(null);
+    setShowRecommendation(false);
+  };
+
+  const handleFinish = () => {
+    if (recommendation) {
+      setShowRecommendation(true);
+    } else {
+      navigateToPokedex();
+    }
   };
 
   const capture = stage === "stall" ? handleStallCapture : handleMenuCapture;
@@ -212,6 +264,26 @@ export default function ScanPage() {
           capturedPhoto={stallImage ?? undefined}
           onComplete={handleCatchComplete}
         />
+      )}
+
+      {/* Recommendation card overlay */}
+      {showRecommendation && recommendation && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rec-card-title"
+          className="fixed inset-0 z-40 flex items-end justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in"
+        >
+          <RecommendationCard
+            recommendation={recommendation}
+            phrasedSuggestion={phrasedSuggestion}
+            onDismiss={dismissRecommendation}
+            onNavigate={() => {
+              setShowRecommendation(false);
+              router.push(`/radar?highlight=${recommendation.node.id}`);
+            }}
+          />
+        </div>
       )}
 
       {/* Camera or fallback */}
