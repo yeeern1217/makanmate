@@ -155,6 +155,7 @@ export default function ScanPage() {
       if (recs.length > 0) {
         const rec = recs[0];
         setRecommendation(rec);
+        setShowRecommendation(true);
         phraseAbortRef.current?.abort();
         const controller = new AbortController();
         phraseAbortRef.current = controller;
@@ -219,7 +220,6 @@ export default function ScanPage() {
     phraseAbortRef.current?.abort();
     setPhrasedSuggestion(null);
     setShowRecommendation(false);
-    navigateToPokedex();
   };
 
   const handleFinish = () => {
