@@ -1,11 +1,5 @@
 import { z } from "zod";
 
-export const livenessCheckSchema = z.object({
-  isReal: z.boolean(),
-  confidence: z.number().min(0).max(1),
-  reason: z.string(),
-});
-
 export const parseMenuSchema = z.object({
   dishes: z.array(z.object({
     raw_text: z.string(),

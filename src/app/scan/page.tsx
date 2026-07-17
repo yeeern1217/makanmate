@@ -98,19 +98,6 @@ export default function ScanPage() {
     }
 
     try {
-      const livenessRes = await fetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({ image, mode: "liveness" }),
-        headers: { "Content-Type": "application/json" },
-      });
-      const livenessData = await livenessRes.json();
-      const liv = livenessData.result;
-      if (liv && !liv.isReal && liv.confidence > 0.7) {
-        setToast("That looks like a screen — find the real stall!");
-        setScanning(false);
-        return;
-      }
-
       const nearest = findNearestHeritageNode(HERITAGE_NODES, pos.lat, pos.lng);
       if (!nearest || nearest.distanceMeters > HERITAGE_CATCH_RADIUS_M) {
         const where = nearest
