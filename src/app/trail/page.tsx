@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCardStore } from "@/store/useCardStore";
@@ -8,6 +8,7 @@ import {
   buildTrail,
   getTrailStops,
   getStallNamesForNarrative,
+  buildTrailReflection,
 } from "@/lib/trails/trail-builder";
 import type { HeritageTrail } from "@/types/card";
 import DiversitySummary from "@/components/trail/DiversitySummary";
@@ -77,7 +78,14 @@ export default function TrailPage() {
     setSharing(false);
   };
 
-  const stops = activeTrail ? getTrailStops(activeTrail, cards) : [];
+  const stops = useMemo(
+    () => (activeTrail ? getTrailStops(activeTrail, cards) : []),
+    [activeTrail, cards]
+  );
+  const reflection = useMemo(
+    () => (activeTrail ? buildTrailReflection(activeTrail, cards) : undefined),
+    [activeTrail, cards]
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -285,6 +293,7 @@ export default function TrailPage() {
               origins={activeTrail.culturalDiversity}
               totalAkar={activeTrail.totalAkarScore}
               totalCards={stops.length}
+              reflection={reflection}
             />
 
             {/* Share button */}
