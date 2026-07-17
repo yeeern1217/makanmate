@@ -21,7 +21,7 @@
  */
 
 import "dotenv/config";
-import { generateObject, generateText } from "ai";
+import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
@@ -157,6 +157,7 @@ async function tavilySearch(
   const response = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({
       api_key: TAVILY_API_KEY,
       query,
@@ -181,6 +182,8 @@ async function tavilySearch(
   );
 }
 
+const MAX_CONTENT_CHARS = 600;
+
 // ---------------------------------------------------------------------------
 // Utility: slugify name to ID
 // ---------------------------------------------------------------------------
@@ -202,10 +205,10 @@ async function scoutAgent(
   city: string,
   stallType: string
 ): Promise<ScoutCandidate[]> {
-  console.log("\n========================================");
-  console.log("  AGENT 1: SCOUT");
-  console.log("========================================");
-  console.log(`Searching for heritage ${stallType} stalls in ${city}...`);
+  console.error("\n========================================");
+  console.error("  AGENT 1: SCOUT");
+  console.error("========================================");
+  console.error(`Searching for heritage ${stallType} stalls in ${city}...`);
 
   const queries = [
     `best heritage ${stallType} stalls ${city} Malaysia traditional`,
@@ -213,70 +216,71 @@ async function scoutAgent(
     `famous traditional ${stallType} ${city} Malaysia history founded year`,
   ];
 
-  const allResults: { title: string; url: string; content: string }[] = [];
-
-  for (const query of queries) {
-    console.log(`  [Scout] Searching: "${query}"`);
-    try {
-      const results = await tavilySearch(query, 5);
-      console.log(`  [Scout] Found ${results.length} results`);
-      allResults.push(...results);
-    } catch (err) {
-      console.error(
-        `  [Scout] Search failed for query: ${query}`,
-        (err as Error).message
-      );
-    }
-  }
+  console.error(`  [Scout] Launching ${queries.length} searches in parallel...`);
+  const resultSets = await Promise.all(
+    queries.map((q) =>
+      tavilySearch(q, 5).catch((err) => {
+        console.error(
+          `  [Scout] Search failed for query: ${q}`,
+          (err as Error).message
+        );
+        return [] as { title: string; url: string; content: string }[];
+      })
+    )
+  );
+  const allResults = resultSets.flat();
+  console.error(`  [Scout] Total results from all queries: ${allResults.length}`);
 
   if (allResults.length === 0) {
-    console.log("  [Scout] No search results found. Aborting.");
+    console.error("  [Scout] No search results found. Aborting.");
     return [];
   }
 
   // Use Gemini to extract structured candidates from search results
-  console.log(
+  console.error(
     `  [Scout] Extracting candidates from ${allResults.length} search results using Gemini...`
   );
 
   const searchContext = allResults
     .map(
       (r, i) =>
-        `[Source ${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}\n---`
+        `[Source ${i + 1}] ${r.title}\nURL: ${r.url}\n[UNTRUSTED WEB CONTENT]\n${r.content.slice(0, MAX_CONTENT_CHARS)}\n[END UNTRUSTED CONTENT]\n---`
     )
     .join("\n");
 
-  const { object: candidates } = await generateObject({
-    model: google("gemini-2.0-flash"),
-    schema: z.object({
-      candidates: z.array(
-        z.object({
-          name: z.string().describe("Full stall name"),
-          signatureDish: z
-            .string()
-            .describe("The most famous dish served here"),
-          foundedYear: z
-            .number()
-            .nullable()
-            .describe("Year founded, or null if unknown"),
-          location: z
-            .string()
-            .describe("Specific location/address within the city"),
-          culturalOrigin: z
-            .string()
-            .describe(
-              "Cultural origin: Malay, Chinese, Indian, Peranakan, Mamak, or Portuguese"
-            ),
-          snippet: z
-            .string()
-            .describe(
-              "Brief heritage description from the search results"
-            ),
-          sourceUrl: z.string().describe("Primary source URL"),
-        })
-      ),
-    }),
-    prompt: `You are a heritage food researcher for ${city}, Malaysia. Extract heritage ${stallType} stall candidates from these search results.
+  let extractedCandidates: ScoutCandidate[] = [];
+  try {
+    const { object: candidates } = await generateObject({
+      model: google("gemini-2.0-flash"),
+      schema: z.object({
+        candidates: z.array(
+          z.object({
+            name: z.string().describe("Full stall name"),
+            signatureDish: z
+              .string()
+              .describe("The most famous dish served here"),
+            foundedYear: z
+              .number()
+              .nullable()
+              .describe("Year founded, or null if unknown"),
+            location: z
+              .string()
+              .describe("Specific location/address within the city"),
+            culturalOrigin: z
+              .string()
+              .describe(
+                "Cultural origin: Malay, Chinese, Indian, Peranakan, Mamak, or Portuguese"
+              ),
+            snippet: z
+              .string()
+              .describe(
+                "Brief heritage description from the search results"
+              ),
+            sourceUrl: z.string().describe("Primary source URL"),
+          })
+        ),
+      }),
+      prompt: `You are a heritage food researcher for ${city}, Malaysia. Extract heritage ${stallType} stall candidates from these search results.
 
 IMPORTANT RULES:
 - Only include stalls that are clearly heritage/traditional (multi-generational, decades old, or culturally significant)
@@ -288,18 +292,25 @@ IMPORTANT RULES:
 
 Search results:
 ${searchContext}`,
-  });
+    });
+    extractedCandidates = candidates.candidates;
+  } catch (err) {
+    console.error(
+      `  [Scout] Gemini extraction failed: ${(err as Error).message}`
+    );
+    return [];
+  }
 
-  console.log(
-    `  [Scout] Extracted ${candidates.candidates.length} candidates:`
+  console.error(
+    `  [Scout] Extracted ${extractedCandidates.length} candidates:`
   );
-  for (const c of candidates.candidates) {
-    console.log(
+  for (const c of extractedCandidates) {
+    console.error(
       `    - ${c.name} (${c.signatureDish}, est. ${c.foundedYear ?? "unknown"})`
     );
   }
 
-  return candidates.candidates;
+  return extractedCandidates;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,17 +321,17 @@ async function verifierAgent(
   candidates: ScoutCandidate[],
   city: string
 ): Promise<(ScoutCandidate & { verifications: VerificationResult[] })[]> {
-  console.log("\n========================================");
-  console.log("  AGENT 2: VERIFIER");
-  console.log("========================================");
-  console.log(`Verifying ${candidates.length} candidates...`);
+  console.error("\n========================================");
+  console.error("  AGENT 2: VERIFIER");
+  console.error("========================================");
+  console.error(`Verifying ${candidates.length} candidates...`);
 
   const verified: (ScoutCandidate & {
     verifications: VerificationResult[];
   })[] = [];
 
   for (const candidate of candidates) {
-    console.log(`\n  [Verifier] Checking: ${candidate.name}`);
+    console.error(`\n  [Verifier] Checking: ${candidate.name}`);
     const verifications: VerificationResult[] = [];
 
     // Define 3 claims to verify for each stall
@@ -343,14 +354,14 @@ async function verifierAgent(
     ];
 
     for (const claim of claims) {
-      console.log(
+      console.error(
         `    [Verifier] Verifying ${claim.field}: "${claim.value}"`
       );
 
       // Step 1: Search for independent sources about this claim
       const verifyQuery = `"${candidate.name}" ${city} Malaysia ${claim.field === "foundedYear" ? "founded year history" : claim.field === "signatureDish" ? "famous dish specialty" : "cultural origin heritage"}`;
 
-      console.log(`    [Verifier] Search: "${verifyQuery}"`);
+      console.error(`    [Verifier] Search: "${verifyQuery}"`);
 
       let searchResults: { title: string; url: string; content: string }[] =
         [];
@@ -363,7 +374,7 @@ async function verifierAgent(
       }
 
       if (searchResults.length === 0) {
-        console.log(
+        console.error(
           `    [Verifier] No independent sources found for ${claim.field}. Keeping original.`
         );
         verifications.push({
@@ -381,29 +392,30 @@ async function verifierAgent(
       const sourceTexts = searchResults
         .map(
           (r, i) =>
-            `[Source ${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`
+            `[Source ${i + 1}] ${r.title}\nURL: ${r.url}\n[UNTRUSTED WEB CONTENT]\n${r.content.slice(0, MAX_CONTENT_CHARS)}\n[END UNTRUSTED CONTENT]`
         )
         .join("\n---\n");
 
-      const { object: verifyResult } = await generateObject({
-        model: google("gemini-2.0-flash"),
-        schema: z.object({
-          sourcesAgree: z
-            .boolean()
-            .describe("Do the sources agree with the original claim?"),
-          foundValues: z
-            .array(z.string())
-            .describe("All distinct values found across sources"),
-          bestValue: z
-            .string()
-            .describe(
-              "The most credible value based on all sources"
-            ),
-          confidence: z
-            .enum(["high", "medium", "low"])
-            .describe("Confidence in the verified value"),
-        }),
-        prompt: `You are verifying a claim about "${candidate.name}" in ${city}, Malaysia.
+      try {
+        const { object: verifyResult } = await generateObject({
+          model: google("gemini-2.0-flash"),
+          schema: z.object({
+            sourcesAgree: z
+              .boolean()
+              .describe("Do the sources agree with the original claim?"),
+            foundValues: z
+              .array(z.string())
+              .describe("All distinct values found across sources"),
+            bestValue: z
+              .string()
+              .describe(
+                "The most credible value based on all sources"
+              ),
+            confidence: z
+              .enum(["high", "medium", "low"])
+              .describe("Confidence in the verified value"),
+          }),
+          prompt: `You are verifying a claim about "${candidate.name}" in ${city}, Malaysia.
 
 Claim: ${claim.field} = "${claim.value}"
 Original source: ${claim.sourceUrl}
@@ -416,62 +428,63 @@ Check whether the independent sources agree with the original claim.
 - If they conflict, list all distinct values found and pick the most credible one.
 - For founding years, prefer the earliest credible year from official sources.
 - For cultural origin, it must be one of: Malay, Chinese, Indian, Peranakan, Mamak, Portuguese.`,
-      });
+        });
 
-      if (!verifyResult.sourcesAgree) {
-        // --------------------------------------------------------
-        // CONFLICT DETECTED: Re-search with narrower query
-        // --------------------------------------------------------
-        console.log(
-          `    [Verifier] CONFLICT DETECTED for ${claim.field}!`
-        );
-        console.log(
-          `    [Verifier] Original: "${claim.value}" vs Found: ${JSON.stringify(verifyResult.foundValues)}`
-        );
-
-        // Narrower re-search
-        const narrowQuery = `"${candidate.name}" ${city} ${claim.field === "foundedYear" ? `"established" OR "since" OR "founded in"` : claim.field === "signatureDish" ? `"famous for" OR "known for" OR "signature"` : `"${candidate.culturalOrigin}" heritage origin`}`;
-
-        console.log(
-          `    [Verifier] Re-searching with narrower query: "${narrowQuery}"`
-        );
-
-        let narrowResults: {
-          title: string;
-          url: string;
-          content: string;
-        }[] = [];
-        try {
-          narrowResults = await tavilySearch(narrowQuery, 3);
-        } catch (err) {
+        if (!verifyResult.sourcesAgree) {
+          // --------------------------------------------------------
+          // CONFLICT DETECTED: Re-search with narrower query
+          // --------------------------------------------------------
           console.error(
-            `    [Verifier] Narrow search failed: ${(err as Error).message}`
+            `    [Verifier] CONFLICT DETECTED for ${claim.field}!`
           );
-        }
+          console.error(
+            `    [Verifier] Original: "${claim.value}" vs Found: ${JSON.stringify(verifyResult.foundValues)}`
+          );
 
-        if (narrowResults.length > 0) {
-          // Use Gemini to compare and resolve the conflict
-          const narrowSourceTexts = narrowResults
-            .map(
-              (r, i) =>
-                `[Narrow Source ${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`
-            )
-            .join("\n---\n");
+          // Narrower re-search
+          const narrowQuery = `"${candidate.name}" ${city} ${claim.field === "foundedYear" ? `"established" OR "since" OR "founded in"` : claim.field === "signatureDish" ? `"famous for" OR "known for" OR "signature"` : `"${candidate.culturalOrigin}" heritage origin`}`;
 
-          const { object: resolved } = await generateObject({
-            model: google("gemini-2.0-flash"),
-            schema: z.object({
-              resolvedValue: z
-                .string()
-                .describe("The final resolved value after comparing all sources"),
-              confidence: z
-                .enum(["high", "medium", "low"])
-                .describe("Confidence in the resolution"),
-              reasoning: z
-                .string()
-                .describe("Brief explanation of how the conflict was resolved"),
-            }),
-            prompt: `You need to resolve a conflicting claim about "${candidate.name}" in ${city}, Malaysia.
+          console.error(
+            `    [Verifier] Re-searching with narrower query: "${narrowQuery}"`
+          );
+
+          let narrowResults: {
+            title: string;
+            url: string;
+            content: string;
+          }[] = [];
+          try {
+            narrowResults = await tavilySearch(narrowQuery, 3);
+          } catch (err) {
+            console.error(
+              `    [Verifier] Narrow search failed: ${(err as Error).message}`
+            );
+          }
+
+          if (narrowResults.length > 0) {
+            // Use Gemini to compare and resolve the conflict
+            const narrowSourceTexts = narrowResults
+              .map(
+                (r, i) =>
+                  `[Narrow Source ${i + 1}] ${r.title}\nURL: ${r.url}\n[UNTRUSTED WEB CONTENT]\n${r.content.slice(0, MAX_CONTENT_CHARS)}\n[END UNTRUSTED CONTENT]`
+              )
+              .join("\n---\n");
+
+            try {
+              const { object: resolved } = await generateObject({
+                model: google("gemini-2.0-flash"),
+                schema: z.object({
+                  resolvedValue: z
+                    .string()
+                    .describe("The final resolved value after comparing all sources"),
+                  confidence: z
+                    .enum(["high", "medium", "low"])
+                    .describe("Confidence in the resolution"),
+                  reasoning: z
+                    .string()
+                    .describe("Brief explanation of how the conflict was resolved"),
+                }),
+                prompt: `You need to resolve a conflicting claim about "${candidate.name}" in ${city}, Malaysia.
 
 Claim field: ${claim.field}
 Original value: "${claim.value}"
@@ -491,30 +504,57 @@ Resolve the conflict by considering:
 5. For cultural origin: must be one of Malay, Chinese, Indian, Peranakan, Mamak, Portuguese
 
 Provide the resolved value and explain your reasoning.`,
-          });
+              });
 
-          console.log(
-            `    [Verifier] RESOLVED: ${claim.field} = "${resolved.resolvedValue}" (${resolved.confidence})`
-          );
-          console.log(
-            `    [Verifier] Reasoning: ${resolved.reasoning}`
-          );
+              console.error(
+                `    [Verifier] RESOLVED: ${claim.field} = "${resolved.resolvedValue}" (${resolved.confidence})`
+              );
+              console.error(
+                `    [Verifier] Reasoning: ${resolved.reasoning}`
+              );
 
-          verifications.push({
-            field: claim.field,
-            originalValue: claim.value,
-            verifiedValue: resolved.resolvedValue,
-            confidence: resolved.confidence,
-            sources: [
-              ...searchResults.map((r) => r.url),
-              ...narrowResults.map((r) => r.url),
-            ],
-            conflictResolved: true,
-          });
+              verifications.push({
+                field: claim.field,
+                originalValue: claim.value,
+                verifiedValue: resolved.resolvedValue,
+                confidence: resolved.confidence,
+                sources: [
+                  ...searchResults.map((r) => r.url),
+                  ...narrowResults.map((r) => r.url),
+                ],
+                conflictResolved: true,
+              });
+            } catch (err) {
+              console.error(
+                `    [Verifier] Gemini conflict resolution failed: ${(err as Error).message}. Using broad search best value.`
+              );
+              verifications.push({
+                field: claim.field,
+                originalValue: claim.value,
+                verifiedValue: verifyResult.bestValue,
+                confidence: "low",
+                sources: searchResults.map((r) => r.url),
+                conflictResolved: false,
+              });
+            }
+          } else {
+            // No narrow results found, use the best value from the broad search
+            console.error(
+              `    [Verifier] No narrow results. Using broad search best: "${verifyResult.bestValue}"`
+            );
+            verifications.push({
+              field: claim.field,
+              originalValue: claim.value,
+              verifiedValue: verifyResult.bestValue,
+              confidence: verifyResult.confidence,
+              sources: searchResults.map((r) => r.url),
+              conflictResolved: true,
+            });
+          }
         } else {
-          // No narrow results found, use the best value from the broad search
-          console.log(
-            `    [Verifier] No narrow results. Using broad search best: "${verifyResult.bestValue}"`
+          // Sources agree
+          console.error(
+            `    [Verifier] CONFIRMED: ${claim.field} = "${verifyResult.bestValue}" (${verifyResult.confidence})`
           );
           verifications.push({
             field: claim.field,
@@ -522,20 +562,19 @@ Provide the resolved value and explain your reasoning.`,
             verifiedValue: verifyResult.bestValue,
             confidence: verifyResult.confidence,
             sources: searchResults.map((r) => r.url),
-            conflictResolved: true,
+            conflictResolved: false,
           });
         }
-      } else {
-        // Sources agree
-        console.log(
-          `    [Verifier] CONFIRMED: ${claim.field} = "${verifyResult.bestValue}" (${verifyResult.confidence})`
+      } catch (err) {
+        console.error(
+          `    [Verifier] Gemini verification failed for ${claim.field}: ${(err as Error).message}. Marking as unverified.`
         );
         verifications.push({
           field: claim.field,
           originalValue: claim.value,
-          verifiedValue: verifyResult.bestValue,
-          confidence: verifyResult.confidence,
-          sources: searchResults.map((r) => r.url),
+          verifiedValue: claim.value,
+          confidence: "low",
+          sources: [claim.sourceUrl],
           conflictResolved: false,
         });
       }
@@ -559,7 +598,7 @@ Provide the resolved value and explain your reasoning.`,
     verified.push(verifiedCandidate);
   }
 
-  console.log(
+  console.error(
     `\n  [Verifier] Verified ${verified.length} candidates.`
   );
   return verified;
@@ -574,10 +613,10 @@ async function enricherAgent(
   city: string,
   stallType: string
 ): Promise<HeritageNode[]> {
-  console.log("\n========================================");
-  console.log("  AGENT 3: ENRICHER");
-  console.log("========================================");
-  console.log(`Enriching ${candidates.length} verified candidates...`);
+  console.error("\n========================================");
+  console.error("  AGENT 3: ENRICHER");
+  console.error("========================================");
+  console.error(`Enriching ${candidates.length} verified candidates...`);
 
   const validCulturalOrigins = [
     "Malay",
@@ -594,7 +633,7 @@ async function enricherAgent(
   const enriched: HeritageNode[] = [];
 
   for (const candidate of candidates) {
-    console.log(`\n  [Enricher] Enriching: ${candidate.name}`);
+    console.error(`\n  [Enricher] Enriching: ${candidate.name}`);
 
     const confidenceSummary = candidate.verifications
       .map(
@@ -603,36 +642,38 @@ async function enricherAgent(
       )
       .join("; ");
 
-    const { object: enrichment } = await generateObject({
-      model: google("gemini-2.0-flash"),
-      schema: z.object({
-        heritageScore: z
-          .number()
-          .min(0)
-          .max(100)
-          .describe(
-            "Heritage score 0-100 based on age, cultural significance, and authenticity"
-          ),
-        description: z
-          .string()
-          .describe(
-            "One or two sentence heritage description emphasizing cultural significance"
-          ),
-        dishId: z
-          .string()
-          .describe(
-            "Slug ID for the signature dish, e.g. 'char-kuey-teow'"
-          ),
-        lat: z.number().describe("Latitude coordinate"),
-        lng: z.number().describe("Longitude coordinate"),
-        culturalOrigin: z
-          .enum(validCulturalOrigins)
-          .describe("Cultural origin category"),
-        suggestedType: z
-          .enum(validStallTypes)
-          .describe("Stall type classification"),
-      }),
-      prompt: `You are enriching a heritage food stall entry for ${city}, Malaysia.
+    let enrichment;
+    try {
+      const result = await generateObject({
+        model: google("gemini-2.0-flash"),
+        schema: z.object({
+          heritageScore: z
+            .number()
+            .min(0)
+            .max(100)
+            .describe(
+              "Heritage score 0-100 based on age, cultural significance, and authenticity"
+            ),
+          description: z
+            .string()
+            .describe(
+              "One or two sentence heritage description emphasizing cultural significance"
+            ),
+          dishId: z
+            .string()
+            .describe(
+              "Slug ID for the signature dish, e.g. 'char-kuey-teow'"
+            ),
+          lat: z.number().describe("Latitude coordinate"),
+          lng: z.number().describe("Longitude coordinate"),
+          culturalOrigin: z
+            .enum(validCulturalOrigins)
+            .describe("Cultural origin category"),
+          suggestedType: z
+            .enum(validStallTypes)
+            .describe("Stall type classification"),
+        }),
+        prompt: `You are enriching a heritage food stall entry for ${city}, Malaysia.
 
 Stall: ${candidate.name}
 Location: ${candidate.location}
@@ -654,7 +695,14 @@ Please provide:
 4. Accurate latitude/longitude for this stall in ${city}
 5. The correct cultural origin from: Malay, Chinese, Indian, Peranakan, Mamak, Portuguese
 6. The stall type from: kopitiam, hawker, warung, mamak`,
-    });
+      });
+      enrichment = result.object;
+    } catch (err) {
+      console.error(
+        `  [Enricher] Gemini enrichment failed for ${candidate.name}: ${(err as Error).message}. Skipping.`
+      );
+      continue;
+    }
 
     // Map city name to the union type
     const cityMap: Record<string, CityName> = {
@@ -688,10 +736,10 @@ Please provide:
       node.founded = candidate.foundedYear;
     }
 
-    console.log(
+    console.error(
       `  [Enricher] Score: ${node.heritage_score}, Origin: ${node.culturalOrigin}, Type: ${node.type}`
     );
-    console.log(`  [Enricher] Desc: ${node.description}`);
+    console.error(`  [Enricher] Desc: ${node.description}`);
     enriched.push(node);
   }
 
@@ -703,10 +751,10 @@ Please provide:
 // ---------------------------------------------------------------------------
 
 function qualityGateAgent(nodes: HeritageNode[]): HeritageNode[] {
-  console.log("\n========================================");
-  console.log("  AGENT 4: QUALITY GATE");
-  console.log("========================================");
-  console.log(`Validating ${nodes.length} enriched nodes...`);
+  console.error("\n========================================");
+  console.error("  AGENT 4: QUALITY GATE");
+  console.error("========================================");
+  console.error(`Validating ${nodes.length} enriched nodes...`);
 
   const validCulturalOrigins = new Set([
     "Malay",
@@ -734,6 +782,8 @@ function qualityGateAgent(nodes: HeritageNode[]): HeritageNode[] {
     if (seenIds.has(node.id)) {
       issues.push(`Duplicate: ID "${node.id}" already in this batch`);
     }
+    // Always register the ID so later duplicates are caught even if this node is rejected
+    seenIds.add(node.id);
 
     // 3. Schema validation
     if (!node.id || node.id.length === 0) {
@@ -810,18 +860,17 @@ function qualityGateAgent(nodes: HeritageNode[]): HeritageNode[] {
     }
 
     if (issues.length > 0) {
-      console.log(`  [QualityGate] REJECTED: ${node.name}`);
+      console.error(`  [QualityGate] REJECTED: ${node.name}`);
       for (const issue of issues) {
-        console.log(`    - ${issue}`);
+        console.error(`    - ${issue}`);
       }
     } else {
-      console.log(`  [QualityGate] PASSED: ${node.name} (ID: ${node.id})`);
+      console.error(`  [QualityGate] PASSED: ${node.name} (ID: ${node.id})`);
       passed.push(node);
-      seenIds.add(node.id);
     }
   }
 
-  console.log(
+  console.error(
     `\n  [QualityGate] ${passed.length}/${nodes.length} nodes passed quality gate.`
   );
   return passed;
@@ -832,12 +881,12 @@ function qualityGateAgent(nodes: HeritageNode[]): HeritageNode[] {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("==============================================");
-  console.log("  MakanMate Heritage Stall Curation Pipeline");
-  console.log("==============================================");
-  console.log(`City: ${city}`);
-  console.log(`Stall Type: ${stallType}`);
-  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.error("==============================================");
+  console.error("  MakanMate Heritage Stall Curation Pipeline");
+  console.error("==============================================");
+  console.error(`City: ${city}`);
+  console.error(`Stall Type: ${stallType}`);
+  console.error(`Timestamp: ${new Date().toISOString()}`);
 
   // Agent 1: Scout
   const candidates = await scoutAgent(city, stallType);
@@ -848,24 +897,29 @@ async function main() {
 
   // Agent 2: Verifier (with conflict resolution loop)
   const verified = await verifierAgent(candidates, city);
+  if (verified.length === 0) {
+    console.error("Pipeline aborted: Verifier produced no results.");
+    process.exit(1);
+  }
 
   // Agent 3: Enricher
   const enriched = await enricherAgent(verified, city, stallType);
+  if (enriched.length === 0) {
+    console.error("Pipeline aborted: Enricher produced no results.");
+    process.exit(1);
+  }
 
   // Agent 4: Quality Gate
   const validated = qualityGateAgent(enriched);
 
   // Output final results as JSON to stdout
-  console.log("\n========================================");
-  console.log("  PIPELINE COMPLETE");
-  console.log("========================================");
-  console.log(`Curated ${validated.length} heritage nodes.\n`);
+  console.error("\n========================================");
+  console.error("  PIPELINE COMPLETE");
+  console.error("========================================");
+  console.error(`Curated ${validated.length} heritage nodes.\n`);
 
-  // Print the valid HeritageNode JSON to stdout
-  // Use a marker so it can be piped/parsed separately from logs
-  console.log("--- BEGIN HERITAGE_NODES JSON ---");
-  console.log(JSON.stringify(validated, null, 2));
-  console.log("--- END HERITAGE_NODES JSON ---");
+  // Print the valid HeritageNode JSON to stdout (only JSON goes to stdout)
+  process.stdout.write(JSON.stringify(validated, null, 2) + "\n");
 }
 
 main().catch((err) => {
