@@ -11,7 +11,6 @@ import { IngredientLore } from "@/types/ai";
 import type { MigrationStory, CardTier } from "@/types/card";
 import type { NodeCategory } from "@/components/blueprint/BlueprintNode";
 import { generateQuiz } from "@/lib/quiz/quiz-generator";
-import DishMetaCard from "@/components/pokedex/DishMetaCard";
 import NodeDetailOverlay from "@/components/blueprint/NodeDetailOverlay";
 import QuizChallenge from "@/components/evolve/QuizChallenge";
 import CardEvolution from "@/components/evolve/CardEvolution";
@@ -35,7 +34,6 @@ export default function PokedexPage() {
 
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const exploredNodes = useCardStore((s) => s.exploredNodes);
-  const heritageUnlocked = useCardStore((s) => s.getHeritageUnlockedTotal());
   const cards = useCardStore((s) => s.cards);
   const evolveCard = useCardStore((s) => s.evolveCard);
   const updateAkarScore = useCardStore((s) => s.updateAkarScore);
@@ -51,6 +49,7 @@ export default function PokedexPage() {
   const [loadingMigration, setLoadingMigration] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showEvolution, setShowEvolution] = useState(false);
+  const [pillsOpen, setPillsOpen] = useState(false);
   const [evolutionFrom, setEvolutionFrom] = useState<CardTier>("bronze");
   const [evolutionTo, setEvolutionTo] = useState<CardTier>("silver");
 
@@ -176,132 +175,28 @@ export default function PokedexPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
-        <Link href="/pokedex" className="text-[var(--text-muted)] hover:text-[var(--foreground)] text-sm">
-          &larr; Collection
+      {/* Compact top bar */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[var(--surface)]/85 border-b-2 border-[var(--border)] backdrop-blur-sm z-10">
+        <Link href="/pokedex" className="text-[var(--text-muted)] hover:text-[var(--foreground)] text-lg shrink-0">
+          &larr;
         </Link>
-        <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Blueprint</h1>
-        <div className="text-right">
-          <p className="text-[10px] text-[var(--text-muted)]">Heritage Unlocked</p>
-          <p className="text-sm font-bold text-[var(--accent-secondary)]">{mounted ? heritageUnlocked : 0}</p>
+        <div className="min-w-0 flex-1 text-center">
+          <h1 className="text-sm font-black text-[var(--accent-primary)] truncate">{dish.name}</h1>
+          <p className="text-[10px] text-[var(--text-muted)]">{exploredCount}/{totalNodes} explored</p>
         </div>
-      </div>
-
-      <div className="px-4 py-3">
-        <DishMetaCard dish={dish} />
-      </div>
-
-      {/* Node progress */}
-      <div className="px-4 pb-2 flex items-center gap-2">
-        <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-dark)] overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[var(--accent-secondary)] transition-all duration-500"
-            style={{ width: `${(exploredCount / totalNodes) * 100}%` }}
-          />
-        </div>
-        <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
-          {exploredCount}/{totalNodes} explored
-        </span>
-      </div>
-
-      {/* Legend */}
-      <div className="px-4 pb-2 flex flex-wrap gap-2">
-        {[
-          { label: "Ingredients", color: "#4a7c59", count: dish.ingredients.length },
-          { label: "Techniques", color: "#c4553a", count: dish.techniques?.length ?? 0 },
-          { label: "Migration", color: "#d4a947", count: 1 },
-          { label: "Dialect", color: "#6b5ce7", count: dish.dialectPhrases?.length ?? 0 },
-        ].map((cat) => (
-          <span
-            key={cat.label}
-            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-            style={{ background: `${cat.color}15`, color: cat.color, border: `1px solid ${cat.color}33` }}
-          >
-            {cat.label} ({cat.count})
-          </span>
-        ))}
-      </div>
-
-      {/* Evolve button */}
-      {canEvolve && (
-        <div className="px-4 pb-2 flex justify-center">
+        {canEvolve ? (
           <button
             onClick={() => setShowQuiz(true)}
-            className="px-6 py-2.5 rounded-full font-bold text-sm text-white shadow-[0_4px_0_var(--border)] hover:translate-y-[2px] hover:shadow-[0_2px_0_var(--border)] active:translate-y-[4px] active:shadow-none transition-all animate-pulse-warm"
-            style={{
-              background: card.tier === "bronze" ? "var(--tier-silver)" : "var(--tier-gold)",
-            }}
+            className="shrink-0 px-3 py-1.5 rounded-full font-bold text-xs text-white shadow-[0_3px_0_var(--border)] active:translate-y-[3px] active:shadow-none transition-all animate-pulse-warm"
+            style={{ background: card && card.tier === "bronze" ? "var(--tier-silver)" : "var(--tier-gold)" }}
           >
-            ⚡ Evolve to {card.tier === "bronze" ? "Silver" : "Gold"}
+            ⚡ Evolve
           </button>
-        </div>
-      )}
-      {card && card.tier === "gold" && (
-        <div className="px-4 pb-2 text-center">
-          <span className="text-xs font-bold text-[var(--tier-gold)]">🥇 Fully Evolved</span>
-        </div>
-      )}
-
-      {/* Node picker — plain DOM buttons */}
-      <div className="px-4 pb-2 flex flex-wrap justify-center gap-1.5">
-        {dish.ingredients.map((ing) => (
-          <button
-            key={ing.id}
-            onClick={() => handleNodeTap(ing.id, "ingredient")}
-            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-              activeNodeId === ing.id
-                ? "bg-[#4a7c59]/20 border-[#4a7c59] text-[#4a7c59] font-bold scale-105"
-                : exploredNodeIds.includes(ing.id)
-                  ? "bg-[var(--surface)] border-[#4a7c59]/30 text-[var(--foreground)]"
-                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-            }`}
-          >
-            {ing.emoji} {ing.name} {exploredNodeIds.includes(ing.id) && "✓"}
-          </button>
-        ))}
-        {dish.techniques?.map((tech) => (
-          <button
-            key={tech.id}
-            onClick={() => handleNodeTap(tech.id, "technique")}
-            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-              activeNodeId === tech.id
-                ? "bg-[#c4553a]/20 border-[#c4553a] text-[#c4553a] font-bold scale-105"
-                : exploredNodeIds.includes(tech.id)
-                  ? "bg-[var(--surface)] border-[#c4553a]/30 text-[var(--foreground)]"
-                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-            }`}
-          >
-            {tech.emoji} {tech.name} {exploredNodeIds.includes(tech.id) && "✓"}
-          </button>
-        ))}
-        <button
-          onClick={() => handleNodeTap(`${dish.id}-migration`, "migration")}
-          className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-            activeNodeId === `${dish.id}-migration`
-              ? "bg-[#d4a947]/20 border-[#d4a947] text-[#d4a947] font-bold scale-105"
-              : exploredNodeIds.includes(`${dish.id}-migration`)
-                ? "bg-[var(--surface)] border-[#d4a947]/30 text-[var(--foreground)]"
-                : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-          }`}
-        >
-          🧭 Migration {exploredNodeIds.includes(`${dish.id}-migration`) && "✓"}
-        </button>
-        {dish.dialectPhrases?.map((dp, i) => (
-          <button
-            key={`dialect-${i}`}
-            onClick={() => handleNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
-            className={`text-xs px-2.5 py-1.5 rounded-full border transition-all ${
-              activeNodeId === `${dish.id}-dialect-${i}`
-                ? "bg-[#6b5ce7]/20 border-[#6b5ce7] text-[#6b5ce7] font-bold scale-105"
-                : exploredNodeIds.includes(`${dish.id}-dialect-${i}`)
-                  ? "bg-[var(--surface)] border-[#6b5ce7]/30 text-[var(--foreground)]"
-                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-            }`}
-          >
-            💬 {dp.phrase} {exploredNodeIds.includes(`${dish.id}-dialect-${i}`) && "✓"}
-          </button>
-        ))}
+        ) : (
+          <span className="shrink-0 text-sm font-bold text-[var(--tier-gold)]">
+            {card && card.tier === "gold" ? "🥇" : ""}
+          </span>
+        )}
       </div>
 
       {/* 3D Blueprint Canvas */}
@@ -360,6 +255,75 @@ export default function PokedexPage() {
               setActiveCategory(null);
             }}
           />
+        )}
+
+        {/* Pill index toggle (failsafe interaction) */}
+        <button
+          onClick={() => setPillsOpen((v) => !v)}
+          className="absolute top-2 right-2 z-30 px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--surface)]/90 border border-[var(--border)] backdrop-blur-sm active:scale-95"
+        >
+          {pillsOpen ? "✕" : "≡ Index"}
+        </button>
+        {pillsOpen && (
+          <div className="absolute top-12 left-2 right-2 z-30 flex gap-1.5 overflow-x-auto whitespace-nowrap rounded-xl bg-[var(--surface)]/90 border border-[var(--border)] backdrop-blur-sm p-2">
+            {dish.ingredients.map((ing) => (
+              <button
+                key={ing.id}
+                onClick={() => handleNodeTap(ing.id, "ingredient")}
+                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                  activeNodeId === ing.id
+                    ? "bg-[#4a7c59]/20 border-[#4a7c59] text-[#4a7c59] font-bold scale-105"
+                    : exploredNodeIds.includes(ing.id)
+                      ? "bg-[var(--surface)] border-[#4a7c59]/30 text-[var(--foreground)]"
+                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+                }`}
+              >
+                {ing.emoji} {ing.name} {exploredNodeIds.includes(ing.id) && "✓"}
+              </button>
+            ))}
+            {dish.techniques?.map((tech) => (
+              <button
+                key={tech.id}
+                onClick={() => handleNodeTap(tech.id, "technique")}
+                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                  activeNodeId === tech.id
+                    ? "bg-[#c4553a]/20 border-[#c4553a] text-[#c4553a] font-bold scale-105"
+                    : exploredNodeIds.includes(tech.id)
+                      ? "bg-[var(--surface)] border-[#c4553a]/30 text-[var(--foreground)]"
+                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+                }`}
+              >
+                {tech.emoji} {tech.name} {exploredNodeIds.includes(tech.id) && "✓"}
+              </button>
+            ))}
+            <button
+              onClick={() => handleNodeTap(`${dish.id}-migration`, "migration")}
+              className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                activeNodeId === `${dish.id}-migration`
+                  ? "bg-[#d4a947]/20 border-[#d4a947] text-[#d4a947] font-bold scale-105"
+                  : exploredNodeIds.includes(`${dish.id}-migration`)
+                    ? "bg-[var(--surface)] border-[#d4a947]/30 text-[var(--foreground)]"
+                    : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+              }`}
+            >
+              🧭 Migration {exploredNodeIds.includes(`${dish.id}-migration`) && "✓"}
+            </button>
+            {dish.dialectPhrases?.map((dp, i) => (
+              <button
+                key={`dialect-${i}`}
+                onClick={() => handleNodeTap(`${dish.id}-dialect-${i}`, "dialect")}
+                className={`shrink-0 text-xs px-2.5 py-1.5 rounded-full border transition-all ${
+                  activeNodeId === `${dish.id}-dialect-${i}`
+                    ? "bg-[#6b5ce7]/20 border-[#6b5ce7] text-[#6b5ce7] font-bold scale-105"
+                    : exploredNodeIds.includes(`${dish.id}-dialect-${i}`)
+                      ? "bg-[var(--surface)] border-[#6b5ce7]/30 text-[var(--foreground)]"
+                      : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+                }`}
+              >
+                💬 {dp.phrase} {exploredNodeIds.includes(`${dish.id}-dialect-${i}`) && "✓"}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
