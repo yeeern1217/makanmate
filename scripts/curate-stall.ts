@@ -113,6 +113,7 @@ interface HeritageNode {
   description: string;
   founded?: number;
   culturalOrigin: CulturalOrigin;
+  tags: string[];
   reviewCount: number;
   isGrassroots: boolean;
   communityCatchCount: number;
@@ -672,6 +673,11 @@ async function enricherAgent(
           suggestedType: z
             .enum(validStallTypes)
             .describe("Stall type classification"),
+          tags: z
+            .array(z.string())
+            .describe(
+              "Content tags for this stall's food, e.g. seafood, noodle, wok-hei, spicy, braised, rice, chicken, vegetarian-ok"
+            ),
         }),
         prompt: `You are enriching a heritage food stall entry for ${city}, Malaysia.
 
@@ -726,6 +732,7 @@ Please provide:
       dish_id: enrichment.dishId,
       description: enrichment.description,
       culturalOrigin: enrichment.culturalOrigin,
+      tags: enrichment.tags ?? [],
       reviewCount: 0,
       isGrassroots: true,
       communityCatchCount: 0,

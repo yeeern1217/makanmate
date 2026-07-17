@@ -152,7 +152,7 @@ async function handleLore(
   body: Record<string, unknown>,
   start: number
 ): Promise<AgentResult> {
-  const { ingredient, dish, lore_hint } = body;
+  const { ingredient, dish, lore_hint = "" } = body;
 
   if (
     !ingredient ||
@@ -173,14 +173,14 @@ async function handleLore(
   );
 
   // Step 2: Build user message with or without search context
-  let userMessage = `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}`;
+  let userMessage = `Tell me the cultural story of "${ingredient}" in "${dish}".${lore_hint ? ` Focus on: ${lore_hint}` : ""}`;
   let fallbackUsed = false;
 
   if (searchResults.length > 0) {
     const searchContext = searchResults
       .map((r, i) => `[Source ${i + 1}: ${r.title}]\n${r.content}`)
       .join("\n\n");
-    userMessage = `Here are web search results about this ingredient:\n\n${searchContext}\n\n---\n\nUsing the search results above as your primary source, tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}`;
+    userMessage = `Here are web search results about this ingredient:\n\n${searchContext}\n\n---\n\nUsing the search results above as your primary source, tell me the cultural story of "${ingredient}" in "${dish}".${lore_hint ? ` Focus on: ${lore_hint}` : ""}`;
   } else {
     fallbackUsed = true;
   }
@@ -331,13 +331,15 @@ async function handlePhraseRecommendation(
     };
   }
 
+  const safeReasoning = (reasoning as unknown[]).filter((r): r is string => typeof r === "string").map(r => r.slice(0, 300));
+
   const result = await generateText({
     model: getModel(),
     system: SYSTEM_PROMPT_PHRASE_RECOMMENDATION,
     messages: [
       {
         role: "user",
-        content: `Recommend "${stallName}" (signature dish: ${dishName}). Reasoning: ${(reasoning as string[]).join("; ")}`,
+        content: `Recommend "${stallName}" (signature dish: ${dishName}). Reasoning: ${safeReasoning.join("; ")}`,
       },
     ],
     tools: {
@@ -364,7 +366,7 @@ async function handleVision(
   const { image, lat, lng } = body;
 
   let locationResult = null;
-  if (lat && lng) {
+  if (lat != null && lng != null) {
     let nearestNode = null;
     let minDist = Infinity;
     for (const node of HERITAGE_NODES) {
@@ -467,6 +469,7 @@ export async function orchestrate(
       result: null,
       durationMs: Date.now() - start,
       fallbackUsed: true,
+      error: true,
     };
   }
 }

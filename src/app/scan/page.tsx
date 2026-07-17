@@ -58,6 +58,8 @@ export default function ScanPage() {
   const [recommendation, setRecommendation] = useState<ScoredRecommendation | null>(null);
   const [phrasedSuggestion, setPhrasedSuggestion] = useState<string | null>(null);
   const [showRecommendation, setShowRecommendation] = useState(false);
+  const [userLat, setUserLat] = useState<number | undefined>(undefined);
+  const [userLng, setUserLng] = useState<number | undefined>(undefined);
   const addDiscoveredNode = useAppStore((s) => s.addDiscoveredNode);
   const addExploredNode = useCardStore((s) => s.addExploredNode);
   const addCard = useCardStore((s) => s.addCard);
@@ -70,7 +72,11 @@ export default function ScanPage() {
   useEffect(() => {
     if (!showRecommendation) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowRecommendation(false);
+      if (e.key === "Escape") {
+        phraseAbortRef.current?.abort();
+        setPhrasedSuggestion(null);
+        setShowRecommendation(false);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -87,6 +93,8 @@ export default function ScanPage() {
     let pos;
     try {
       pos = await getCurrentPosition();
+      setUserLat(pos.lat);
+      setUserLng(pos.lng);
     } catch {
       setToast("Turn on GPS — we need your location to confirm the stall.");
       setScanning(false);
@@ -156,30 +164,36 @@ export default function ScanPage() {
 
   const handleCatchComplete = () => {
     setShowCatchAnim(false);
-    const profile = buildTasteProfile(cards, HERITAGE_NODES);
-    const recs = getTopRecommendations(profile, HERITAGE_NODES, 1);
-    if (recs.length > 0) {
-      const rec = recs[0];
-      setRecommendation(rec);
-      setShowRecommendation(true);
-      phraseAbortRef.current?.abort();
-      const controller = new AbortController();
-      phraseAbortRef.current = controller;
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "phrase-recommendation",
-          stallName: rec.node.name,
-          dishName: rec.node.signature_dish,
-          reasoning: rec.reasoning,
-        }),
-        signal: controller.signal,
-      })
-        .then((res) => res.json())
-        .then((data) => setPhrasedSuggestion(data.result?.suggestion ?? null))
-        .catch((err) => { if (err.name !== "AbortError") setPhrasedSuggestion(null); });
+
+    try {
+      const profile = buildTasteProfile(cards, HERITAGE_NODES);
+      const recs = getTopRecommendations(profile, HERITAGE_NODES, 1, userLat, userLng);
+      if (recs.length > 0) {
+        const rec = recs[0];
+        setRecommendation(rec);
+        setShowRecommendation(true);
+        phraseAbortRef.current?.abort();
+        const controller = new AbortController();
+        phraseAbortRef.current = controller;
+        fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "phrase-recommendation",
+            stallName: rec.node.name,
+            dishName: rec.node.signature_dish,
+            reasoning: rec.reasoning,
+          }),
+          signal: controller.signal,
+        })
+          .then((res) => res.json())
+          .then((data) => setPhrasedSuggestion(data.result?.suggestion ?? null))
+          .catch((err) => { if (err.name !== "AbortError") setPhrasedSuggestion(null); });
+      }
+    } catch (err) {
+      console.error("Recommendation failed:", err);
     }
+
     setStage("menu");
   };
 

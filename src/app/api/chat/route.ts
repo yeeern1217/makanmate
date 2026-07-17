@@ -13,5 +13,6 @@ export async function POST(req: NextRequest) {
   console.log(
     `[api/chat] mode=${result.action} duration=${result.durationMs}ms fallback=${result.fallbackUsed ?? false}`
   );
-  return NextResponse.json(result);
+  const status = result.error ? 502 : 200;
+  return NextResponse.json(result, { status });
 }
