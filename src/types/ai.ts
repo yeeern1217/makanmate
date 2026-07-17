@@ -38,6 +38,7 @@ export interface IngredientLore {
   lore_text: string;
   fun_fact: string;
   origin_region: string;
+  sources?: { title: string; url: string }[];
 }
 
 export interface GPSPosition {

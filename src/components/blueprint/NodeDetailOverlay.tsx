@@ -106,6 +106,22 @@ function IngredientDetail({ node }: { node: { data: IngredientNode; lore: Ingred
               Fun fact: {node.lore.fun_fact}
             </p>
           )}
+          {node.lore.sources && node.lore.sources.length > 0 && (
+            <div className="pt-1.5 space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Sources</p>
+              {node.lore.sources.map((s, i) => (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-[11px] text-[var(--accent-primary)] underline underline-offset-2 truncate"
+                >
+                  [{i + 1}] {s.title || s.url}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

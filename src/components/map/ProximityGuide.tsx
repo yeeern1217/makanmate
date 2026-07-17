@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { HeritageNode } from "@/types/heritage";
 import { GPSPosition } from "@/types/ai";
 import { getPersonaForRegion } from "@/lib/voice/personas";
@@ -40,8 +40,6 @@ export default function ProximityGuide({
   nodes: HeritageNode[];
   userPosition: GPSPosition | null;
 }) {
-  const [phrase, setPhrase] = useState<string | null>(null);
-  const [level, setLevel] = useState<ProximityLevel>("far");
   const lastLevel = useRef<ProximityLevel>("far");
 
   const grassrootsNodes = useMemo(
@@ -49,9 +47,8 @@ export default function ProximityGuide({
     [nodes]
   );
 
-  useEffect(() => {
-    if (!userPosition || grassrootsNodes.length === 0) return;
-
+  const proximity = useMemo(() => {
+    if (!userPosition || grassrootsNodes.length === 0) return null;
     let nearest: HeritageNode | null = null;
     let minDist = Infinity;
     for (const node of grassrootsNodes) {
@@ -61,21 +58,26 @@ export default function ProximityGuide({
         nearest = node;
       }
     }
-
-    if (!nearest) return;
-
-    const newLevel = classifyDistance(minDist);
-    setLevel(newLevel);
-
-    if (newLevel !== lastLevel.current) {
-      lastLevel.current = newLevel;
-      const persona = getPersonaForRegion(nearest.city);
-      const phrases = persona.proximityPhrases[newLevel];
-      const picked = phrases[Math.floor(Math.random() * phrases.length)];
-      setPhrase(picked);
-      speak(picked);
-    }
+    if (!nearest) return null;
+    return { node: nearest, level: classifyDistance(minDist) };
   }, [userPosition, grassrootsNodes]);
+
+  const level = proximity?.level ?? "far";
+
+  const phrase = useMemo(() => {
+    if (!proximity || proximity.level === "far") return null;
+    const persona = getPersonaForRegion(proximity.node.city);
+    const phrases = persona.proximityPhrases[proximity.level];
+    const idx = (proximity.node.id.length + proximity.level.length) % phrases.length;
+    return phrases[idx] ?? null;
+  }, [proximity]);
+
+  useEffect(() => {
+    if (!proximity || proximity.level === lastLevel.current) return;
+    lastLevel.current = proximity.level;
+    if (proximity.level === "far" || !phrase) return;
+    speak(phrase, getPersonaForRegion(proximity.node.city).id);
+  }, [proximity, phrase]);
 
   if (!phrase) return null;
 

@@ -1,5 +1,5 @@
 import { generateText, tool, isStepCount } from "ai";
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import { NextRequest, NextResponse } from "next/server";
 import {
   parseMenuSchema, validateLocationSchema, getIngredientLoreSchema,
@@ -11,6 +11,7 @@ import {
   SYSTEM_PROMPT_LIVENESS_TEST,
 } from "@/lib/ai/prompts";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
+import { searchExa, formatExaContext } from "@/lib/ai/exa";
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "liveness-test") {
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_LIVENESS_TEST,
       messages: [{
         role: "user",
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   if (mode === "liveness") {
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_LIVENESS,
       messages: [{
         role: "user",
@@ -86,22 +87,32 @@ export async function POST(req: NextRequest) {
   }
 
   if (mode === "lore") {
+    const exaResults = await searchExa(`${ingredient} in ${dish} Malaysian food history origin`);
+    const grounding = formatExaContext(exaResults);
+    const userContent = grounding
+      ? `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}\n\nUse these verified web sources to ground your answer (cite by number):\n${grounding}`
+      : `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}`;
+
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_INGREDIENT_LORE,
-      messages: [{ role: "user", content: `Tell me the cultural story of "${ingredient}" in "${dish}". Focus on: ${lore_hint}` }],
+      messages: [{ role: "user", content: userContent }],
       tools: {
         getIngredientLore: tool({ description: "Generate cultural storytelling for an ingredient", inputSchema: getIngredientLoreSchema }),
       },
       toolChoice: "required" as const,
       stopWhen: isStepCount(2),
     });
-    return NextResponse.json({ toolName: "getIngredientLore", result: extractToolInput(result, "getIngredientLore") });
+    return NextResponse.json({
+      toolName: "getIngredientLore",
+      result: extractToolInput(result, "getIngredientLore"),
+      sources: exaResults.map((s) => ({ title: s.title, url: s.url })),
+    });
   }
 
   if (mode === "magic-lens") {
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_MAGIC_LENS,
       messages: [{
         role: "user",
@@ -120,22 +131,32 @@ export async function POST(req: NextRequest) {
   }
 
   if (mode === "migration") {
+    const exaResults = await searchExa(`${migrationHint} migration history to Malaysia`);
+    const grounding = formatExaContext(exaResults);
+    const userContent = grounding
+      ? `Tell the migration story: ${migrationHint}\n\nUse these verified web sources to ground your narrative (cite by number):\n${grounding}`
+      : `Tell the migration story: ${migrationHint}`;
+
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_MIGRATION,
-      messages: [{ role: "user", content: `Tell the migration story: ${migrationHint}` }],
+      messages: [{ role: "user", content: userContent }],
       tools: {
         migrationStory: tool({ description: "Generate migration story", inputSchema: migrationStorySchema }),
       },
       toolChoice: "required" as const,
       stopWhen: isStepCount(2),
     });
-    return NextResponse.json({ toolName: "migrationStory", result: extractToolInput(result, "migrationStory") });
+    return NextResponse.json({
+      toolName: "migrationStory",
+      result: extractToolInput(result, "migrationStory"),
+      sources: exaResults.map((s) => ({ title: s.title, url: s.url })),
+    });
   }
 
   if (mode === "trail-narrative") {
     const result = await generateText({
-      model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+      model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
       system: SYSTEM_PROMPT_TRAIL_NARRATIVE,
       messages: [{ role: "user", content: `Generate a heritage trail narrative for these stalls: ${stalls}` }],
       tools: {
@@ -170,7 +191,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await generateText({
-    model: google(process.env.GOOGLE_MODEL_ID || "gemini-3.1-flash-lite"),
+    model: openai(process.env.OPENAI_MODEL_ID || "gpt-4o-mini"),
     system: SYSTEM_PROMPT_MENU_VISION,
     messages: [{
       role: "user",
