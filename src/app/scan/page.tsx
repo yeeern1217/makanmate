@@ -24,25 +24,6 @@ import type { CapturedCard } from "@/types/card";
 
 type Stage = "stall" | "menu";
 
-async function loadAssetImageAsBase64(filename: string): Promise<string> {
-  const response = await fetch(`/assets/${filename}`);
-  const blob = await response.blob();
-
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === "string") {
-        resolve(result.split(",")[1]);
-      } else {
-        reject(new Error("Failed to read image asset"));
-      }
-    };
-    reader.onerror = () => reject(new Error("Failed to read image asset"));
-    reader.readAsDataURL(blob);
-  });
-}
-
 export default function ScanPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -69,6 +50,12 @@ export default function ScanPage() {
   const onCameraStream = useCallback(() => setCameraReady(true), []);
   const onCameraError = useCallback(() => setCameraError(true), []);
 
+  const dismissRecommendation = () => {
+    phraseAbortRef.current?.abort();
+    setPhrasedSuggestion(null);
+    setShowRecommendation(false);
+  };
+
   useEffect(() => {
     if (!showRecommendation) return;
     const handler = (e: KeyboardEvent) => {
@@ -79,10 +66,10 @@ export default function ScanPage() {
   }, [showRecommendation]);
 
   const handleStallCapture = async () => {
-    if (scanning) return;
+    if (!videoRef.current || scanning) return;
     setScanning(true);
 
-    const image = await loadAssetImageAsBase64("fatty_crab_duck_rice.jpg");
+    const image = captureFrameAsBase64(videoRef.current);
 
     setStallImage(image);
 
@@ -214,12 +201,6 @@ export default function ScanPage() {
     const dishId = catchCard?.dishId;
     if (dishId) router.push(`/pokedex/${dishId}`);
     else router.push("/pokedex");
-  };
-
-  const dismissRecommendation = () => {
-    phraseAbortRef.current?.abort();
-    setPhrasedSuggestion(null);
-    setShowRecommendation(false);
   };
 
   const handleFinish = () => {
