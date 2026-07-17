@@ -59,7 +59,7 @@ export default function ScanPage() {
   const onCameraError = useCallback(() => setCameraError(true), []);
 
   const handleStallCapture = async () => {
-    if (!videoRef.current || scanning) return;
+    if (scanning) return;
     setScanning(true);
 
     const image = await loadAssetImageAsBase64("fatty_crab_duck_rice.jpg");
@@ -253,7 +253,7 @@ export default function ScanPage() {
           )}
 
           {/* Capture button overlay */}
-          {cameraReady && (
+          {(cameraReady || stage === "stall") && (
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
               <div className="relative">
                 <span
