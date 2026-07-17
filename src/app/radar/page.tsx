@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { getCurrentPosition } from "@/lib/gps";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
@@ -26,8 +26,18 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export default function RadarPage() {
+export default function RadarPageWrapper() {
+  return (
+    <Suspense>
+      <RadarPage />
+    </Suspense>
+  );
+}
+
+function RadarPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
   const gpsPosition = useAppStore((s) => s.gpsPosition);
   const setGpsPosition = useAppStore((s) => s.setGpsPosition);
   const discoveredNodes = useAppStore((s) => s.discoveredNodes);
@@ -40,6 +50,15 @@ export default function RadarPage() {
       .then(setGpsPosition)
       .catch(() => setGpsError(true));
   }, [setGpsPosition]);
+
+  // Auto-select and center on highlighted node from query param
+  useEffect(() => {
+    if (!highlightId) return;
+    const node = HERITAGE_NODES.find((n) => n.id === highlightId);
+    if (node) {
+      setSelectedNode(node);
+    }
+  }, [highlightId]);
 
   const distanceToNode = (node: HeritageNode) => {
     if (!gpsPosition) return null;
@@ -84,6 +103,15 @@ export default function RadarPage() {
           discoveredNodes={discoveredNodes}
           userPosition={gpsPosition}
           onNodeClick={setSelectedNode}
+          initialCenter={
+            highlightId
+              ? (() => {
+                  const hn = HERITAGE_NODES.find((n) => n.id === highlightId);
+                  return hn ? [hn.lng, hn.lat] as [number, number] : undefined;
+                })()
+              : undefined
+          }
+          initialZoom={highlightId ? 15 : undefined}
         />
       </div>
 

@@ -68,11 +68,15 @@ export default function RadarMap({
   discoveredNodes,
   userPosition,
   onNodeClick,
+  initialCenter,
+  initialZoom,
 }: {
   nodes: HeritageNode[];
   discoveredNodes: string[];
   userPosition: GPSPosition | null;
   onNodeClick: (node: HeritageNode) => void;
+  initialCenter?: [number, number];
+  initialZoom?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -80,15 +84,17 @@ export default function RadarMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const center: [number, number] = userPosition
-      ? [userPosition.lng, userPosition.lat]
-      : [101.6869, 3.139];
+    const center: [number, number] = initialCenter
+      ? initialCenter
+      : userPosition
+        ? [userPosition.lng, userPosition.lat]
+        : [101.6869, 3.139];
 
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: CARTO_POSITRON,
       center,
-      zoom: 12,
+      zoom: initialZoom ?? 12,
     });
 
     mapRef.current = map;

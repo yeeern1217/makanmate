@@ -197,7 +197,7 @@ export default function ScanPage() {
         headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
-      const found: ParsedDish[] = data.menu?.dishes ?? [];
+      const found: ParsedDish[] = data.result?.menu?.dishes ?? [];
       setDishes(found);
 
       const stallId = catchCard?.stallId;
