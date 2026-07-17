@@ -16,31 +16,28 @@ MakanMate is built around a curated dataset of these invisible stalls. The app d
 
 ## AI Architecture
 
-A single API route (`/api/chat`) dispatches to an orchestrator (`src/lib/orchestrator/orchestrator.ts`) that handles **7 distinct AI modes**, each with its own system prompt, Zod-validated tool schema, and structured output:
+A single API route (`/api/chat`) dispatches to an orchestrator (`src/lib/orchestrator/orchestrator.ts`) that handles **6 distinct AI modes**, each with its own system prompt, Zod-validated tool schema, and structured output:
 
-### 1. Liveness Detection (`mode: "liveness"`)
-Anti-cheat system. Before a stall catch counts, Gemini analyzes the photo for signs of fakery: screen bezels, moire patterns, LCD subpixels, unnaturally flat lighting. Prevents users from photographing a Google Images result to farm cards. Defaults to `isReal: true` when uncertain — false negatives over blocking real users.
-
-### 2. Menu Vision (`mode: "vision"`)
+### 1. Menu Vision (`mode: "vision"`)
 Extracts dishes from hawker menu photos. Decodes Malaysian shorthand (CKT → Char Kuey Teow, NL → Nasi Lemak, BKT → Bak Kut Teh). Returns structured data: raw text, English name, local name, price, decoded shorthand, and whether each dish matches a known entry in our database. Server-side Haversine GPS matching runs in parallel — no hallucination possible on location validation.
 
-### 3. Magic Lens (`mode: "magic-lens"`)
+### 2. Magic Lens (`mode: "magic-lens"`)
 AR-style menu translator. Returns bounding-box positions (percentage-based coordinates) for each menu item so the frontend can overlay translations, allergen icons (shellfish, peanut, gluten, dairy, egg, soy), and halal/non-halal badges directly on the camera feed.
 
-### 4. Ingredient Lore with RAG (`mode: "lore"`)
+### 3. Ingredient Lore with RAG (`mode: "lore"`)
 The only mode that uses external web search. Pipeline:
 1. **Tavily web search** — queries `"{ingredient} {dish} Malaysian food culture history origin"` for real sources
 2. **Source injection** — search results are formatted and injected into the user message as context
 3. **Gemini synthesis** — generates cultural storytelling grounded in the search results, with source attribution
 4. **Graceful fallback** — if Tavily is unavailable or returns nothing, Gemini generates from its own knowledge and the response is flagged with `fallbackUsed: true`
 
-### 5. Migration Stories (`mode: "migration"`)
+### 4. Migration Stories (`mode: "migration"`)
 Generates historically-grounded narratives about how a dish traveled to Malaysia — trade routes, immigration waves, colonial influences. Each dish entry has a `migrationStoryHint` field (e.g., "Teochew fishermen who settled along Penang's coast in the 1800s") that guides generation toward specific, verifiable history rather than generic output.
 
-### 6. Trail Narratives (`mode: "trail-narrative"`)
+### 5. Trail Narratives (`mode: "trail-narrative"`)
 Given a list of caught stalls, generates a narrative connecting them historically and culturally. Produces both a `historical_thread` (geographic and historical connections) and `cultural_connections` (diversity represented).
 
-### 7. Recommendation Phrasing (`mode: "phrase-recommendation"`)
+### 6. Recommendation Phrasing (`mode: "phrase-recommendation"`)
 Takes the algorithmic recommendation output (stall name, dish, reasoning factors) and generates a natural-language suggestion in a warm, local voice. Under 30 words. This is the only mode where AI is used *after* a non-AI algorithm has already made the decision — the AI phrases, it doesn't choose.
 
 All modes use `toolChoice: "required"` with Zod schemas to force structured output. The orchestrator returns timing data (`durationMs`) and fallback flags for every call.
@@ -94,7 +91,7 @@ Connects 3+ caught cards into Heritage Trails with computed metadata: cultural d
 - **Ingredients** with cultural lore hints, local names, and cooking hints
 - **Techniques** with tool descriptions (wok hei, sieve pressing, spice pounding)
 - **Dialect phrases** with pronunciation guides and usage context
-- **Cooking order** for the 3D cooking mini-game sequence
+- **Cooking order** sequences defined per dish (data only — not surfaced in the UI)
 - **Migration story hints** that guide AI generation toward specific history
 
 ---
@@ -105,7 +102,7 @@ Connects 3+ caught cards into Heritage Trails with computed metadata: cultural d
 GPS-enabled map (MapLibre GL, no API key) showing all 16 stalls. Grassroots pins pulse with color; hyped pins are greyed out. Proximity voice guide with 3 regional personas (Uncle Lim in Penang, Auntie Kamala in KL, Ah Kong in Ipoh) that speak colloquial Malaysian English phrases as you approach a stall — using Web Speech API, no external service.
 
 ### Catch Flow (`/scan`)
-3-step pipeline: liveness check → GPS proximity validation → card creation. On a successful grassroots catch, the Akar Score algorithm runs, rarity is classified, and a card reveal animation plays. After catching, the inverted-ranking recommender fires and Gemini phrases a natural-language suggestion for your next stall.
+2-step pipeline: GPS proximity validation → card creation. On a successful grassroots catch, the Akar Score algorithm runs, rarity is classified, and a card reveal animation plays. After catching, the recommendation card appears automatically — the inverted-ranking recommender fires and Gemini phrases a natural-language suggestion for your next stall, with a Navigate button that jumps straight to that pin on the radar.
 
 ### Magic Lens (`/lens`)
 AR-style menu translator with positioned overlays. Allergen icons, halal/non-halal badges, translations, and prices placed at approximate bounding-box coordinates on the camera feed.
@@ -120,10 +117,7 @@ Interactive 3D knowledge graph (React Three Fiber) with concentric orbital rings
 - **Migration story** — AI-generated historical narrative with "Listen" narration
 - **Dialect phrases** — local pronunciations with "Speak" button
 
-Card evolution (Bronze → Silver → Gold) via timed quiz challenges.
-
-### 3D Cooking Mini-Game *(built, not yet wired to a page route)*
-Components exist (`CookingScene`, `CookingHUD`, `WokModel`, `SizzleParticles`, `VictoryIngredients`) with full game logic: tap ingredients into a 3D wok in the correct `cookingOrder` sequence. Correct picks fly in with sizzle particle effects; wrong picks trigger shake feedback. All 12 dishes have cooking orders defined. Pending: a page route or entry point from the Heritage Blueprint to launch it.
+Card evolution (Bronze → Silver → Gold) via timed quiz challenges. Tapping a node also glides the camera in to frame it while its lore streams in from Gemini.
 
 ### Heritage Trail (`/trail`)
 Connects 3+ catches into a trail with AI-generated narrative, trail map with route lines, cultural diversity summary, and shareable PNG card (html-to-image + Web Share API).
@@ -135,7 +129,7 @@ Connects 3+ catches into a trail with AI-generated narrative, trail map with rou
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 16 (App Router) + React 19 + TypeScript |
-| AI | Google Gemini via Vercel AI SDK (7 modes) |
+| AI | Google Gemini via Vercel AI SDK (6 modes) |
 | Search/RAG | Tavily API (ingredient lore grounding) |
 | 3D | React Three Fiber + drei |
 | Maps | MapLibre GL JS + CARTO (free, no API key) |
@@ -189,16 +183,16 @@ npm run dev
 ```
 src/
   app/
-    api/chat/            Single API route → orchestrator (7 Gemini modes)
+    api/chat/            Single API route → orchestrator (6 Gemini modes)
     radar/               Heritage map with GPS + voice guide
-    scan/                Camera catch flow (liveness → vision → GPS → card)
+    scan/                Camera catch flow (vision → GPS → card)
     pokedex/             Collection grid + [dishId] 3D blueprint
     trail/               Heritage trail builder
     lens/                AR menu translator
     offline/             PWA offline fallback
   lib/
     orchestrator/        Central AI dispatcher with mode routing
-    ai/                  System prompts (7) + Zod tool schemas (8)
+    ai/                  System prompts (6) + Zod tool schemas (7)
     recommender/         Inverted-ranking engine + taste profiling
     scoring/             Akar Score algorithm + rarity classifier
     search/              Tavily web search integration (RAG)
@@ -217,7 +211,7 @@ src/
     evolve/              Card evolution + quiz challenge
     lens/                Magic lens AR overlay
     map/                 MapLibre radar + proximity voice guide
-    pokedex/             3D dish viewer, cooking game, collection grid
+    pokedex/             3D dish viewer, collection grid
     scan/                Camera viewport, capture button, results
     trail/               Trail map, diversity summary, share card
     nav/                 Bottom navigation bar
