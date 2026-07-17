@@ -1,5 +1,5 @@
 "use client";
-import { memo, useRef } from "react";
+import { memo, useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html, Billboard } from "@react-three/drei";
 import * as THREE from "three";
@@ -28,6 +28,8 @@ function BlueprintNode({
   position,
   isActive,
   isExplored,
+  onSelect,
+  registerObject,
 }: {
   id: string;
   emoji: string;
@@ -37,15 +39,23 @@ function BlueprintNode({
   isActive: boolean;
   isExplored: boolean;
   onSelect?: (id: string, category: NodeCategory) => void;
+  registerObject?: (id: string, obj: THREE.Object3D | null) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const glowRef = useRef<THREE.Mesh>(null);
+  const [hovered, setHovered] = useState(false);
 
   const color = CATEGORY_COLORS[category];
 
+  useEffect(() => {
+    if (!onSelect || !registerObject) return;
+    registerObject(id, groupRef.current);
+    return () => registerObject(id, null);
+  }, [id, onSelect, registerObject]);
+
   useFrame((state, delta) => {
     if (!groupRef.current) return;
-    const targetScale = isActive ? 1.3 : 1.0;
+    const targetScale = isActive ? 1.3 : hovered ? 1.12 : 1.0;
     const s = groupRef.current.scale.x;
     groupRef.current.scale.setScalar(THREE.MathUtils.lerp(s, targetScale, delta * 5));
 
@@ -62,6 +72,27 @@ function BlueprintNode({
         <sphereGeometry args={[0.5, 16, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.08} />
       </mesh>
+
+      {onSelect && (
+        <mesh
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onSelect(id, category);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerOut={() => {
+            setHovered(false);
+            document.body.style.cursor = "auto";
+          }}
+        >
+          <sphereGeometry args={[0.6, 16, 16]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
 
       <Billboard>
         <Html center style={{ pointerEvents: "none", userSelect: "none" }}>
