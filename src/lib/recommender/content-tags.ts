@@ -53,7 +53,7 @@ export const NODE_TAGS: Record<string, string[]> = {
 
   // ── Ipoh ──
   "onn-kee-chicken":         ["chicken", "steamed", "savory-umami"],
-  "foh-san-hor-fun":         ["noodle", "steamed", "savory-umami"],
+  "foh-san-hor-fun":         ["noodle", "seafood", "chicken", "savory-umami"],
   "foh-san-dim-sum":         ["pork", "seafood", "steamed", "savory-umami"],
   "sin-yoon-loong-egg-tart": ["pastry", "egg", "sweet"],
 

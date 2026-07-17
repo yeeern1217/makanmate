@@ -1,6 +1,5 @@
 import type { HeritageNode } from "@/types/heritage";
 import type { TasteProfile, ScoredRecommendation, ScoreBreakdown } from "./types";
-import { NODE_TAGS } from "./content-tags";
 import { haversineDistance } from "@/lib/geo";
 
 // ── Constants ───────────────────────────────────────────────────────
@@ -38,11 +37,11 @@ export function computeRecommendationScore(
     contentScore = 50;
   } else {
     const userTags = tasteProfile.dishCategoryTags;
-    const stallTags = new Set(NODE_TAGS[node.id] ?? []);
+    const stallTags = new Set(node.tags);
 
     matchingTags = [...stallTags].filter((t) => userTags.has(t));
     const intersectionSize = matchingTags.length;
-    const unionSize = new Set([...userTags, ...stallTags]).size;
+    const unionSize = userTags.size + stallTags.size - intersectionSize;
     const jaccard = unionSize > 0 ? intersectionSize / unionSize : 0;
     contentScore = jaccard * 100;
   }
@@ -103,14 +102,11 @@ export function computeRecommendationScore(
     );
   }
 
-  if (
-    proximityScore * WEIGHT_PROXIMITY > 20 &&
-    distanceM !== undefined
-  ) {
-    reasoning.push(`Just ${Math.round(distanceM)}m from you`);
+  if (proximityScore > 60 && userLat !== undefined && userLng !== undefined) {
+    reasoning.push(`Just ${Math.round(distanceM!)}m from you`);
   }
 
-  if (diversityScore * WEIGHT_DIVERSITY > 20) {
+  if (diversityScore * WEIGHT_DIVERSITY >= 20) {
     if (originGap) {
       reasoning.push(
         `You haven't explored ${node.culturalOrigin} cuisine yet`,

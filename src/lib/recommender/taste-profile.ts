@@ -1,7 +1,6 @@
 import type { CapturedCard } from "@/types/card";
 import type { HeritageNode } from "@/types/heritage";
 import type { TasteProfile } from "./types";
-import { NODE_TAGS } from "./content-tags";
 
 /**
  * Build a taste profile from captured cards and the full node list.
@@ -21,10 +20,13 @@ export function buildTasteProfile(
   const stallTypeAffinity: Record<string, number> = {};
   const dishCategoryTags = new Set<string>();
   const capturedStallIds = new Set<string>();
+  let resolvedCaptures = 0;
 
   for (const card of cards) {
     const node = nodeById.get(card.stallId);
     if (!node) continue;
+
+    resolvedCaptures++;
 
     // Increment affinities
     originAffinity[node.culturalOrigin] =
@@ -33,9 +35,8 @@ export function buildTasteProfile(
     stallTypeAffinity[node.type] =
       (stallTypeAffinity[node.type] ?? 0) + 1;
 
-    // Collect tags
-    const tags = NODE_TAGS[node.id] ?? [];
-    for (const tag of tags) {
+    // Collect tags from the node directly
+    for (const tag of node.tags) {
       dishCategoryTags.add(tag);
     }
 
@@ -48,6 +49,6 @@ export function buildTasteProfile(
     stallTypeAffinity,
     dishCategoryTags,
     capturedStallIds,
-    totalCaptures: cards.length,
+    totalCaptures: resolvedCaptures,
   };
 }

@@ -178,7 +178,7 @@ export const HERITAGE_NODES: HeritageNode[] = [
     reviewCount: 31,
     isGrassroots: true,
     communityCatchCount: 87,
-    tags: ["noodle", "steamed", "savory-umami"],
+    tags: ["noodle", "seafood", "chicken", "savory-umami"],
   },
   {
     id: "foh-san-dim-sum",
