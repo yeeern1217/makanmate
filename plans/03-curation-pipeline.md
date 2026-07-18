@@ -31,8 +31,8 @@ Scout ──> Verifier ──> Enricher ──> Quality Gate
 
 | Agent | Job | Tool |
 |---|---|---|
-| **Scout** | Search for heritage stall candidates in a city/district | Tavily API |
-| **Verifier** | Cross-check claims (founding year, cultural origin, signature dish) via independent searches. Flag conflicts. | Tavily API + Gemini |
+| **Scout** | Search for heritage stall candidates in a city/district | Exa API |
+| **Verifier** | Cross-check claims (founding year, cultural origin, signature dish) via independent searches. Flag conflicts. | Exa API + Gemini |
 | **Enricher** | Assign content tags, compute heritage score inputs, generate cultural context | Gemini structured output |
 | **Quality Gate** | Deduplicate against existing DB, validate schema, output final JSON | Deterministic code |
 
@@ -52,7 +52,7 @@ Single self-contained script. Run via `npx tsx scripts/curate-stall.ts --city "P
 - `zod` — for output schemas
 
 **Environment variables needed:**
-- `TAVILY_API_KEY` — for web search
+- `Exa_API_KEY` — for web search
 - `GOOGLE_GENERATIVE_AI_API_KEY` or `GOOGLE_API_KEY` — for Gemini (same key the app uses, loaded from `.env.local`)
 
 The script should load `.env.local` itself. Use:
@@ -78,16 +78,16 @@ const typeIdx = args.indexOf("--type");
 const city = cityIdx >= 0 ? args[cityIdx + 1] : "Penang";
 const stallType = typeIdx >= 0 ? args[typeIdx + 1] : "hawker";
 
-// --- Tavily search helper ---
-async function searchTavily(query: string, maxResults = 5): Promise<Array<{title: string, url: string, content: string}>> {
-  const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) throw new Error("TAVILY_API_KEY not set");
-  const res = await fetch("https://api.tavily.com/search", {
+// --- Exa search helper ---
+async function searchExa(query: string, maxResults = 5): Promise<Array<{title: string, url: string, content: string}>> {
+  const apiKey = process.env.Exa_API_KEY;
+  if (!apiKey) throw new Error("Exa_API_KEY not set");
+  const res = await fetch("https://api.Exa.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ api_key: apiKey, query, max_results: maxResults, search_depth: "basic" }),
   });
-  if (!res.ok) throw new Error(`Tavily ${res.status}`);
+  if (!res.ok) throw new Error(`Exa ${res.status}`);
   const data = await res.json();
   return (data.results ?? []).map((r: any) => ({ title: r.title, url: r.url, content: r.content }));
 }
@@ -124,7 +124,7 @@ const enrichStallSchema = z.object({
 // --- AGENT 1: SCOUT ---
 async function scoutAgent(city: string, type: string) {
   console.log(`\n🔍 SCOUT: Searching for hidden ${type} stalls in ${city}...`);
-  const searchResults = await searchTavily(`hidden heritage ${type} stalls ${city} Malaysia traditional food`);
+  const searchResults = await searchExa(`hidden heritage ${type} stalls ${city} Malaysia traditional food`);
   const context = searchResults.map(r => `[${r.title}]\n${r.content}`).join("\n\n");
 
   const result = await generateText({
@@ -143,7 +143,7 @@ async function scoutAgent(city: string, type: string) {
 
 // --- AGENT 2: VERIFIER (with conflict resolution loop) ---
 async function verifyAgent(stallName: string, claim: string, claimType: string) {
-  const searchResults = await searchTavily(`"${stallName}" ${claim} ${claimType}`, 3);
+  const searchResults = await searchExa(`"${stallName}" ${claim} ${claimType}`, 3);
   if (searchResults.length === 0) return { claim, supported: false, evidence: "No sources found", conflictsWith: undefined };
 
   const context = searchResults.map(r => `[${r.title}]\n${r.content}`).join("\n\n");
@@ -347,7 +347,7 @@ Check if these are already in `devDependencies` before installing.
 
 1. Run with real keys:
    ```bash
-   TAVILY_API_KEY=xxx GOOGLE_GENERATIVE_AI_API_KEY=xxx npx tsx scripts/curate-stall.ts --city "Penang" --type "hawker"
+   Exa_API_KEY=xxx GOOGLE_GENERATIVE_AI_API_KEY=xxx npx tsx scripts/curate-stall.ts --city "Penang" --type "hawker"
    ```
    Should print the 4-agent pipeline progress with emoji headers and output valid JSON.
 

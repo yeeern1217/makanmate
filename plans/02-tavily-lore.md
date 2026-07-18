@@ -1,6 +1,6 @@
-# Plan: Ingredient Lore Agent with Live Web Search (Tavily)
+# Plan: Ingredient Lore Agent with Live Web Search (Exa)
 
-**Branch:** `feat/tavily-lore` (from latest `origin/main`)
+**Branch:** `feat/Exa-lore` (from latest `origin/main`)
 **Batch:** 1 (can run in parallel with plans 01 and 03)
 
 ---
@@ -16,7 +16,7 @@ The existing `mode === "lore"` branch generates ingredient cultural stories usin
 ## What to Build
 
 Upgrade the lore agent into a **two-step agentic chain**:
-1. **Search step:** Tavily API fetches real web sources about the ingredient
+1. **Search step:** Exa API fetches real web sources about the ingredient
 2. **Synthesis step:** Gemini synthesizes a grounded cultural narrative from the search snippets
 
 This makes it genuinely agentic (external tool use + synthesis) and is one of the two strongest AI proof points for judges.
@@ -24,33 +24,33 @@ This makes it genuinely agentic (external tool use + synthesis) and is one of th
 **Git setup:** Before starting, run:
 ```bash
 git fetch origin
-git checkout -b feat/tavily-lore origin/main
+git checkout -b feat/Exa-lore origin/main
 ```
 
 ---
 
 ## Files to CREATE
 
-### `src/lib/search/tavily.ts`
+### `src/lib/search/Exa.ts`
 
-A lightweight wrapper around the Tavily Search API. No npm package — use raw `fetch()`.
+A lightweight wrapper around the Exa Search API. No npm package — use raw `fetch()`.
 
 ```typescript
-export interface TavilySearchResult {
+export interface ExaSearchResult {
   title: string;
   url: string;
   content: string; // snippet
 }
 
-export async function searchTavily(query: string, maxResults = 3): Promise<TavilySearchResult[]> {
-  const apiKey = process.env.TAVILY_API_KEY;
+export async function searchExa(query: string, maxResults = 3): Promise<ExaSearchResult[]> {
+  const apiKey = process.env.Exa_API_KEY;
   if (!apiKey) {
-    console.warn("TAVILY_API_KEY not set — skipping web search");
+    console.warn("Exa_API_KEY not set — skipping web search");
     return [];
   }
 
   try {
-    const res = await fetch("https://api.tavily.com/search", {
+    const res = await fetch("https://api.Exa.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -63,7 +63,7 @@ export async function searchTavily(query: string, maxResults = 3): Promise<Tavil
     });
 
     if (!res.ok) {
-      console.warn(`Tavily search failed: ${res.status}`);
+      console.warn(`Exa search failed: ${res.status}`);
       return [];
     }
 
@@ -74,7 +74,7 @@ export async function searchTavily(query: string, maxResults = 3): Promise<Tavil
       content: r.content ?? "",
     }));
   } catch (err) {
-    console.warn("Tavily search error:", err);
+    console.warn("Exa search error:", err);
     return [];
   }
 }
@@ -182,8 +182,8 @@ Your tone should be warm, vivid, and educational — like a passionate local unc
 
 Replace the `mode === "lore"` branch (lines 88-100 in the current file). The new version:
 
-1. Imports `searchTavily` from `@/lib/search/tavily`
-2. Calls Tavily with a search query built from the ingredient and dish
+1. Imports `searchExa` from `@/lib/search/Exa`
+2. Calls Exa with a search query built from the ingredient and dish
 3. If search results exist, injects them into the user message as context
 4. Calls Gemini with the existing tool schema (which now supports `sources`)
 5. Returns the result as before
@@ -209,7 +209,7 @@ With:
 ```typescript
 if (mode === "lore") {
     // Step 1: Search for real web context
-    const searchResults = await searchTavily(
+    const searchResults = await searchExa(
       `${ingredient} ${dish} Malaysian food culture history origin`
     );
 
@@ -239,7 +239,7 @@ if (mode === "lore") {
 
 Add the import at the top of route.ts:
 ```typescript
-import { searchTavily } from "@/lib/search/tavily";
+import { searchExa } from "@/lib/search/Exa";
 ```
 
 ---
@@ -258,11 +258,11 @@ import { searchTavily } from "@/lib/search/tavily";
 
 ## Environment Variable
 
-Add `TAVILY_API_KEY` to `.env.local` (create if needed, but do NOT commit it). The Tavily API key is server-side only — no `NEXT_PUBLIC_` prefix.
+Add `Exa_API_KEY` to `.env.local` (create if needed, but do NOT commit it). The Exa API key is server-side only — no `NEXT_PUBLIC_` prefix.
 
 If `.env.local` already exists, just append:
 ```
-TAVILY_API_KEY=your-key-here
+Exa_API_KEY=your-key-here
 ```
 
 If you don't have a real key, use a placeholder. The code is designed to gracefully skip search when the key is missing.
@@ -272,13 +272,13 @@ If you don't have a real key, use a placeholder. The code is designed to gracefu
 ## Verification
 
 1. `npm run build` should pass with no TypeScript errors.
-2. Test with Tavily key set:
+2. Test with Exa key set:
    ```bash
    curl -X POST http://localhost:3000/api/chat \
      -H "Content-Type: application/json" \
      -d '{"mode":"lore","ingredient":"flat rice noodles","dish":"Char Kuey Teow","lore_hint":"Hokkien origins and wok hei tradition"}'
    ```
    Response should include a `sources` array with real URLs.
-3. Test without Tavily key (remove from .env.local, restart):
+3. Test without Exa key (remove from .env.local, restart):
    Same curl command — response should work but WITHOUT `sources` (Gemini-only fallback). No error.
-4. Check the console for `"Tavily search failed"` or `"TAVILY_API_KEY not set"` warnings in fallback cases — these should be clean warnings, not crashes.
+4. Check the console for `"Exa search failed"` or `"Exa_API_KEY not set"` warnings in fallback cases — these should be clean warnings, not crashes.

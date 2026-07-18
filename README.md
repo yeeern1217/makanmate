@@ -26,10 +26,10 @@ AR-style menu translator. Returns bounding-box positions (percentage-based coord
 
 ### 3. Ingredient Lore with RAG (`mode: "lore"`)
 The only mode that uses external web search. Pipeline:
-1. **Tavily web search** — queries `"{ingredient} {dish} Malaysian food culture history origin"` for real sources
+1. **Exa web search** — queries `"{ingredient} {dish} Malaysian food culture history origin"` for real sources
 2. **Source injection** — search results are formatted and injected into the user message as context
 3. **Gemini synthesis** — generates cultural storytelling grounded in the search results, with source attribution
-4. **Graceful fallback** — if Tavily is unavailable or returns nothing, Gemini generates from its own knowledge and the response is flagged with `fallbackUsed: true`
+4. **Graceful fallback** — if Exa is unavailable or returns nothing, Gemini generates from its own knowledge and the response is flagged with `fallbackUsed: true`
 
 ### 4. Migration Stories (`mode: "migration"`)
 Generates historically-grounded narratives about how a dish traveled to Malaysia — trade routes, immigration waves, colonial influences. Each dish entry has a `migrationStoryHint` field (e.g., "Teochew fishermen who settled along Penang's coast in the 1800s") that guides generation toward specific, verifiable history rather than generic output.
@@ -130,7 +130,7 @@ Connects 3+ catches into a trail with AI-generated narrative, trail map with rou
 |---|---|
 | Framework | Next.js 16 (App Router) + React 19 + TypeScript |
 | AI | Google Gemini via Vercel AI SDK (6 modes) |
-| Search/RAG | Tavily API (ingredient lore grounding) |
+| Search/RAG | Exa API (ingredient lore grounding) |
 | 3D | React Three Fiber + drei |
 | Maps | MapLibre GL JS + CARTO (free, no API key) |
 | Voice | Web Speech API (browser-native, no external service) |
@@ -145,7 +145,7 @@ Connects 3+ catches into a trail with AI-generated narrative, trail map with rou
 ### Prerequisites
 - Node.js 18+
 - Google AI API key (for menu scanning, lore, magic lens, trail narratives)
-- Tavily API key (optional — ingredient lore falls back gracefully without it)
+- Exa API key (optional — ingredient lore falls back gracefully without it)
 
 ### Setup
 
@@ -196,7 +196,7 @@ src/
     ai/                  System prompts (6) + Zod tool schemas (7)
     recommender/         Inverted-ranking engine + taste profiling
     scoring/             Akar Score algorithm + rarity classifier
-    search/              Tavily web search integration (RAG)
+    search/              Exa web search integration (RAG)
     data/                16 heritage nodes + 12 dish knowledge graphs
     quiz/                Procedural quiz generator from dish data
     trails/              Trail builder + reflection generator
