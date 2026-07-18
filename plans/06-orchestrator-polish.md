@@ -11,7 +11,7 @@
 MakanMate is a Malaysian street food heritage app. Next.js 16, React 19, TypeScript, Vercel AI SDK v7 with `@ai-sdk/google`. After all prior plans are merged, the codebase has:
 
 - **Taste Profile + Recommender** (Plan 01): `src/lib/recommender/` — taste profiling and inverted-ranking scoring
-- **Tavily Lore** (Plan 02): `src/lib/search/tavily.ts` — web search, lore mode now does search→synthesize chain
+- **Exa Lore** (Plan 02): `src/lib/search/Exa.ts` — web search, lore mode now does search→synthesize chain
 - **Curation Pipeline** (Plan 03): `scripts/curate-stall.ts` — standalone build-time script
 - **Recommendation Card** (Plan 04): `src/components/catch/RecommendationCard.tsx` — post-catch recommendation UI, `mode: "phrase-recommendation"` added to route
 - **Trail Reflection** (Plan 05): reflection section in DiversitySummary
@@ -57,7 +57,7 @@ import { google } from "@ai-sdk/google";
 import { NextResponse } from "next/server";
 import { /* all schemas */ } from "@/lib/ai/tools";
 import { /* all prompts */ } from "@/lib/ai/prompts";
-import { searchTavily } from "@/lib/search/tavily";
+import { searchExa } from "@/lib/search/Exa";
 import { HERITAGE_NODES } from "@/lib/data/heritage-nodes";
 import type { AgentResult } from "./types";
 
@@ -122,7 +122,7 @@ async function handleLore(body: any, start: number): Promise<AgentResult> {
   const { ingredient, dish, lore_hint } = body;
 
   // Step 1: Search (with failsafe)
-  const searchResults = await searchTavily(
+  const searchResults = await searchExa(
     `${ingredient} ${dish} Malaysian food culture history origin`
   );
 
@@ -247,7 +247,7 @@ The exact implementation depends on how the radar page currently structures its 
 ## Files to NOT TOUCH
 
 - `src/lib/recommender/*` — already done
-- `src/lib/search/tavily.ts` — already done
+- `src/lib/search/Exa.ts` — already done
 - `src/lib/trails/trail-builder.ts` — already done by Plan 05
 - `src/components/trail/DiversitySummary.tsx` — already done by Plan 05
 - `scripts/curate-stall.ts` — already done by Plan 03
@@ -261,7 +261,7 @@ Implement these in the orchestrator's catch blocks:
 
 | Failure | Fallback |
 |---|---|
-| Tavily API down | Lore handler skips search, uses Gemini-only (`fallbackUsed: true`) |
+| Exa API down | Lore handler skips search, uses Gemini-only (`fallbackUsed: true`) |
 | Vision parse fails | Return `{ menu: { dishes: [], stall_type: "unknown", confidence: 0 }, location: null }` with `fallbackUsed: true` — client shows ManualDishDropdown |
 | Recommendation phrasing fails | Return `{ suggestion: null }` — client uses template string |
 | Any handler throws | Top-level catch returns `{ action, result: null, fallbackUsed: true }` |
@@ -289,4 +289,4 @@ Implement these in the orchestrator's catch blocks:
 4. Full demo walkthrough in the app:
    - Radar → Catch stall → Recommendation card appears → Tap ingredient → Lore overlay shows sources → Build trail → Reflection section shows
 5. Test the radar highlight: navigate to `/radar?highlight=new-lane-ckt` — map should center on that node.
-6. Test failsafe: temporarily remove `TAVILY_API_KEY` — lore should still work (Gemini-only fallback), console shows warning.
+6. Test failsafe: temporarily remove `Exa_API_KEY` — lore should still work (Gemini-only fallback), console shows warning.

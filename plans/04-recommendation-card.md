@@ -241,7 +241,7 @@ Example outputs:
 - `src/types/heritage.ts` — already modified by Plan 01
 - `src/lib/data/heritage-nodes.ts` — already modified by Plan 01
 - `src/lib/recommender/*` — already created by Plan 01
-- `src/lib/search/tavily.ts` — created by Plan 02
+- `src/lib/search/Exa.ts` — created by Plan 02
 - `src/lib/trails/trail-builder.ts`
 - `src/components/trail/DiversitySummary.tsx`
 - `scripts/`

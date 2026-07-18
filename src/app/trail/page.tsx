@@ -15,6 +15,7 @@ import type { HeritageTrail } from "@/types/card";
 import DiversitySummary from "@/components/trail/DiversitySummary";
 import ShareableCard from "@/components/trail/ShareableCard";
 import { shareTrailCard } from "@/lib/share/generate-share-image";
+import { narrateStory, stopSpeaking } from "@/lib/voice/voice-guide";
 import LoadingPulse from "@/components/ui/LoadingPulse";
 
 const TrailMap = dynamic(() => import("@/components/trail/TrailMap"), {
@@ -40,6 +41,7 @@ export default function TrailPage() {
   const [activeTrail, setActiveTrail] = useState<HeritageTrail | null>(null);
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [narratingThread, setNarratingThread] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -98,6 +100,16 @@ export default function TrailPage() {
     setSharing(true);
     await shareTrailCard(shareRef.current);
     setSharing(false);
+  };
+
+  const toggleNarrateThread = () => {
+    if (narratingThread) {
+      stopSpeaking();
+      setNarratingThread(false);
+    } else if (resolvedActiveTrail?.historicalThread) {
+      narrateStory(resolvedActiveTrail.historicalThread);
+      setNarratingThread(true);
+    }
   };
 
   const stops = useMemo(
@@ -279,7 +291,15 @@ export default function TrailPage() {
             {loadingNarrative && <LoadingPulse text="Weaving the historical thread..." />}
             {resolvedActiveTrail.historicalThread && (
               <div className="retro-card p-4">
-                <h3 className="text-xs font-bold text-[var(--accent-secondary)] mb-1">Historical Thread</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-xs font-bold text-[var(--accent-secondary)]">Historical Thread</h3>
+                  <button
+                    onClick={toggleNarrateThread}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--accent-secondary)]/15 text-[var(--accent-secondary)] border border-[var(--accent-secondary)]/30 active:scale-95 transition-transform"
+                  >
+                    {narratingThread ? "⏹ Stop" : "🔊 Listen"}
+                  </button>
+                </div>
                 <p className="text-xs leading-relaxed text-[var(--foreground)] italic">
                   &ldquo;{resolvedActiveTrail.historicalThread}&rdquo;
                 </p>

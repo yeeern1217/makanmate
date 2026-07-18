@@ -48,7 +48,9 @@ export default function NodeDetailOverlay({
         </div>
 
         <div className="px-4 pb-4 max-h-[42vh] overflow-y-auto">
-          {node.kind === "ingredient" && <IngredientDetail node={node} />}
+          {node.kind === "ingredient" && (
+            <IngredientDetail node={node} narrating={narrating} onNarrate={handleNarrate} />
+          )}
           {node.kind === "technique" && <TechniqueDetail data={node.data} />}
           {node.kind === "migration" && (
             <MigrationDetail
@@ -84,7 +86,15 @@ function CategoryBadge({ kind }: { kind: string }) {
   );
 }
 
-function IngredientDetail({ node }: { node: { data: IngredientNode; lore: IngredientLore | null; loading: boolean } }) {
+function IngredientDetail({
+  node,
+  narrating,
+  onNarrate,
+}: {
+  node: { data: IngredientNode; lore: IngredientLore | null; loading: boolean };
+  narrating: boolean;
+  onNarrate: (text: string) => void;
+}) {
   return (
     <div className="space-y-2 mt-2">
       <div className="flex items-center gap-2">
@@ -93,6 +103,14 @@ function IngredientDetail({ node }: { node: { data: IngredientNode; lore: Ingred
           <h3 className="font-bold text-sm">{node.data.name}</h3>
           <p className="text-xs text-[var(--text-muted)]">{node.data.local_name}</p>
         </div>
+        {node.lore && (
+          <button
+            onClick={() => onNarrate(node.lore!.lore_text)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[var(--accent-grassroots)]/15 text-[var(--accent-grassroots)] border border-[var(--accent-grassroots)]/30 active:scale-95 transition-transform"
+          >
+            {narrating ? "⏹ Stop" : "🔊 Listen"}
+          </button>
+        )}
       </div>
       {node.loading && <LoadingPulse text="Discovering lore..." />}
       {node.lore && (

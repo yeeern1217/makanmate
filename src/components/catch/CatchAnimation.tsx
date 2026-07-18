@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import type { RarityClass, CardTier, CulturalOrigin } from "@/types/card";
 import StallCard from "./StallCard";
 import { RARITY_CARD_STYLE, RARITY_NAME, RARITY_RANK } from "@/lib/rarity";
+import { speak } from "@/lib/voice/voice-guide";
+import { getPersonaForRegion } from "@/lib/voice/personas";
 
 type Phase = "shrink" | "flip" | "reveal" | "done";
 
@@ -21,6 +23,7 @@ export default function CatchAnimation({
   tier,
   akarScore,
   capturedPhoto,
+  city,
   onComplete,
 }: {
   dishId: string;
@@ -30,6 +33,7 @@ export default function CatchAnimation({
   tier: CardTier;
   akarScore: number;
   capturedPhoto?: string;
+  city?: string;
   onComplete: () => void;
 }) {
   const [phase, setPhase] = useState<Phase>("shrink");
@@ -37,11 +41,18 @@ export default function CatchAnimation({
   useEffect(() => {
     const timers = [
       setTimeout(() => setPhase("flip"), 600),
-      setTimeout(() => setPhase("reveal"), 1000),
+      setTimeout(() => {
+        setPhase("reveal");
+        const persona = city ? getPersonaForRegion(city) : null;
+        const line = persona
+          ? persona.celebration[Math.floor(Math.random() * persona.celebration.length)]
+          : `Caught! ${stallName} — a ${RARITY_NAME[rarity]} find.`;
+        speak(line, persona?.id);
+      }, 1000),
       setTimeout(() => setPhase("done"), 2800),
     ];
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [city, stallName, rarity]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
