@@ -27,7 +27,7 @@ export default function CollectionPage() {
   const teasers = allDishes.slice(0, 2).map((d) => d.emoji ?? "🍜");
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]/70">
@@ -69,7 +69,7 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-24">
         {cards.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-14 text-center animate-fade-in">
             {/* Fanned card-pack teaser — spreads open on hover */}

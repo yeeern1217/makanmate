@@ -122,7 +122,7 @@ export default function TrailPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)]/80 border-b-2 border-[var(--border)] backdrop-blur-sm">
         <h1 className="text-lg font-black text-[var(--accent-primary)]">Heritage Trail</h1>
@@ -135,7 +135,7 @@ export default function TrailPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24">
         {/* No cards state */}
         {mounted && displayCards.length === 0 && (
           <div className="flex flex-col items-center justify-center px-6 py-14 text-center animate-fade-in">
@@ -277,7 +277,7 @@ export default function TrailPage() {
                 -mx-4 / -mt-4 break out of the scroll container's padding so it
                 sits edge-to-edge starting right under the header. */}
             {stops.length > 0 ? (
-              <div className="relative -mx-4 -mt-4 h-[calc(100dvh-3.5rem-72px)] min-h-[320px] border-b-2 border-[var(--border)]">
+              <div className="relative -mx-4 -mt-4 h-64 min-h-[16rem] border-b-2 border-[var(--border)] md:h-72">
                 <TrailMap stops={stops} />
                 <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full border border-[var(--border)] bg-[var(--surface)]/90 px-3 py-1 shadow-sm backdrop-blur-sm">
                   <span className="text-xs font-bold text-[var(--foreground)]">{resolvedActiveTrail.name}</span>
