@@ -269,7 +269,7 @@ export default function ScanPage() {
 
       {/* Camera or fallback */}
       {!cameraError ? (
-        <div className="relative flex-1 bg-[var(--surface-dark)]">
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-[var(--surface-dark)]">
           <CameraViewport
             videoRef={videoRef}
             onStream={onCameraStream}
@@ -278,7 +278,7 @@ export default function ScanPage() {
 
           {/* Retro viewfinder overlay */}
           {cameraReady && (
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 z-10 pointer-events-none">
               {/* Stage hint */}
               <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full">
                 <span className="text-xs font-semibold text-[var(--accent-secondary)] tracking-wide">
@@ -307,7 +307,7 @@ export default function ScanPage() {
 
           {/* Capture button overlay */}
           {(cameraReady || stage === "stall") && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+            <div className="absolute bottom-[5.5rem] left-1/2 z-20 -translate-x-1/2 flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]">
               <div className="relative">
                 <span
                   aria-hidden
@@ -327,7 +327,7 @@ export default function ScanPage() {
           )}
 
           {scanning && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/50">
               <LoadingPulse text={loadingText} />
             </div>
           )}
