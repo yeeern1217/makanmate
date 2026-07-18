@@ -107,7 +107,7 @@ function RadarPage() {
         </span>
       </div>
 
-      {process.env.NODE_ENV !== "production" && <LocationSimulator />}
+      {process.env.NEXT_PUBLIC_MOCK_GPS === "true" && <LocationSimulator />}
 
       {locating && !simulatedPosition && (
         <div className="bg-blue-50 text-blue-800 text-xs text-center py-2 border-b border-blue-200">
