@@ -1,19 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/nav/BottomNav";
-
-const displayFont = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "900"],
-});
-
-const bodyFont = DM_Sans({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 export const metadata: Metadata = {
   title: "MakanMate",
@@ -39,10 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${displayFont.variable} ${bodyFont.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="h-[100dvh] overflow-hidden flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         <div className="min-h-0 flex-1 flex flex-col pb-[72px]">
           {children}

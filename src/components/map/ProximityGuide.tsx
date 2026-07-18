@@ -8,9 +8,9 @@ import { speak } from "@/lib/voice/voice-guide";
 type ProximityLevel = "far" | "warm" | "hot" | "arrived";
 
 function classifyDistance(meters: number): ProximityLevel {
-  if (meters <= 50) return "arrived";
-  if (meters <= 200) return "hot";
-  if (meters <= 500) return "warm";
+  if (meters <= 2000) return "arrived";
+  if (meters <= 4000) return "hot";
+  if (meters <= 8000) return "warm";
   return "far";
 }
 

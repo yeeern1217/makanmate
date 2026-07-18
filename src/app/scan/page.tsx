@@ -243,6 +243,7 @@ export default function ScanPage() {
           tier={catchCard.tier}
           akarScore={catchCard.akarScore}
           capturedPhoto={stallImage ?? undefined}
+          city={HERITAGE_NODES.find((n) => n.id === catchCard.stallId)?.city}
           onComplete={handleCatchComplete}
         />
       )}

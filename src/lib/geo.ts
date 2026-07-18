@@ -2,7 +2,8 @@ import { HeritageNode } from "@/types/heritage";
 
 // A catch should mean the explorer is physically at the stall, not merely in
 // the same city. The simulator can still place a developer at a node exactly.
-export const HERITAGE_CATCH_RADIUS_M = 50;
+// Set wide (2km) for demo purposes so a fixed/mock position triggers catches.
+export const HERITAGE_CATCH_RADIUS_M = 2000;
 
 export function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
